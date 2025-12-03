@@ -1,0 +1,9 @@
+groq:
+  model_name: "qwen/qwen3-32b"
+  temperature: 0.2
+  max_tokens: 2048
+
+ollama:
+  model_name: "mistral"
+  temperature: 0
+  max_tokens: 2048

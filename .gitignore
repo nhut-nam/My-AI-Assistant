@@ -49,14 +49,11 @@ artifacts/
 # -----------------------
 .ipynb_checkpoints/
 research/
-*.ipynb
-
 # -----------------------
 # Config & Secrets
 # -----------------------
 .env
 *.env
-config/*.yaml
 config/*.yml
 config/*.json
 
