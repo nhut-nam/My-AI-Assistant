@@ -1,0 +1,110 @@
+# -----------------------
+# Python Cache & Bytecode
+# -----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.py.class
+
+# -----------------------
+# Virtual Environments
+# -----------------------
+venv/
+.venv/
+env/
+ENV/
+*.venv
+*.env
+pip-wheel-metadata/
+
+# -----------------------
+# IDE / Editor Settings
+# -----------------------
+.idea/
+.vscode/
+*.iml
+
+# -----------------------
+# Packaging / Build
+# -----------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+MANIFEST
+*.whl
+
+# -----------------------
+# Logs & Runtime Outputs
+# -----------------------
+logs/
+artifacts/
+*.log
+*.out
+
+# -----------------------
+# Jupyter / Research Files
+# -----------------------
+.ipynb_checkpoints/
+research/
+*.ipynb
+
+# -----------------------
+# Config & Secrets
+# -----------------------
+.env
+*.env
+config/*.yaml
+config/*.yml
+config/*.json
+
+# Nếu config của bạn chứa PURE templates, bỏ dòng trên.
+
+# -----------------------
+# Cache & Temporary Files
+# -----------------------
+.cache/
+.tmp/
+temp/
+*.tmp
+*.swp
+.DS_Store
+
+# -----------------------
+# DVC Files
+# -----------------------
+.dvc/
+.cache/
+*.dvc
+
+# -----------------------
+# Application Specific
+# -----------------------
+storage/    # Nếu chứa runtime data. Xóa nếu data quan trọng.
+app/        # PyCharm project module metadata
+templates/__pycache__/
+
+# -----------------------
+# Compiled models / large files
+# -----------------------
+*.pt
+*.bin
+*.pkl
+*.model
+*.ckpt
+*.onnx
+
+# -----------------------
+# OS System Files
+# -----------------------
+Thumbs.db
+desktop.ini
+
+# -----------------------
+# Others you may not want
+# -----------------------
+*.sqlite3
+*.db
+*.jsonl
