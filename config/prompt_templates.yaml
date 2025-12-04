@@ -85,138 +85,104 @@ replanner_prompt: |
   You are the SOP (Standard Operation Procedure) Engine.
 
 sop_prompt: |
-  Your job: Convert the provided PLAN and AVAILABLE_AGENTS into a single JSON SOP 
-  object that EXACTLY matches the schema below. 
-  Any violation → return exactly:
-  "ERROR_INVALID_SOP_FORMAT".
+  Your job: Convert the given PLAN and AVAILABLE_AGENTS into one SOP JSON object EXACTLY following the schema below.  
+  Return ONLY the SOP JSON. Do NOT explain.  
+  Any violation → "ERROR_INVALID_SOP_FORMAT".
 
-  ────────────────────────────────────────
+  ────────────────────────────────
   ABSOLUTE RULE — DO NOT MODIFY "<" or ">"
-  ────────────────────────────────────────
-  You MUST NEVER modify, escape, replace, or remove the characters "<" or ">".
+  ────────────────────────────────
+  Allowed parameter references ONLY:
+    "<store_result_as>"
+    "<store_result_as>.<field>"
+    "<store_result_as>.<field>.<subfield>"
+  Any deviation (e.g., "&lt;", "$var", step[x].output) → ERROR_INVALID_SOP_FORMAT.
 
-  Any parameter reference MUST be:
-      "<store_result_as>"
-      "<store_result_as>.<field>"
-      "<store_result_as>.<field>.<subfield>"
-
-  Any deviation (e.g. "&lt;", "&gt;", "$var", step[x].output, etc.) → ERROR_INVALID_SOP_FORMAT.
-
-  ───────────────────────────────
-  ALLOWED INFORMATION SOURCES ONLY
-  ───────────────────────────────
+  ────────────────────────────────
+  ALLOWED INFORMATION SOURCES
+  ────────────────────────────────
   Use ONLY:
-  - PLAN.steps
-  - AVAILABLE_AGENTS (names, tool names, and tool parameter definitions)
-
+    - PLAN.steps
+    - AVAILABLE_AGENTS (agents, tools, params)
   Forbidden:
-  - Inventing agents/tools/params
-  - Inventing values
-  - Inventing placeholders (e.g., AgentA, ToolX, "Step X description")
-
+    - Inventing agents/tools/params/values/placeholders
   Any invented token → ERROR_INVALID_SOP_FORMAT.
 
-  ────────────────────
-  SOP DATA MODEL RULES
-  ────────────────────
+  ────────────────────────────────
+  CONDITION RULES
+  ────────────────────────────────
+  Condition fields:
+    step: int (previous step)
+    field: "success" OR "output.<subfield>" (exactly ONE subfield)
+        - Must exist in tool's output schema
+        - "output" alone is forbidden
+    operator: "==", "!=", ">", "<", ">=", "<="
+    value: literal matching referenced field type
 
-  Condition:
-    A Condition inspects a previous step's ToolResponse.
+  ────────────────────────────────
+  SOPStep RULES
+  ────────────────────────────────
+  Required fields:
+    step_number: int  
+    description: string  
+    agent_type: MUST exist in AVAILABLE_AGENTS  
+    execution_mode: "static" or "dynamic"  
 
-    Required fields:
-      step: int
-          - The step number being inspected.
+  Static steps:
+    action_type: {{ "agent": str, "tool": str }}
+    params: MUST match tool signature EXACTLY
 
-      field:
-          MUST be one of:
-              - "success"
-              - "output.<subfield>"
+  Dynamic steps:
+    action_type: null
+    params: if params are needed, use ONLY allowed parameter references 
 
-          RULES:
-            - "success" refers to ToolResponse.success (boolean).
-            - "output" ALWAYS means ToolResponse.output (the RAW result returned by the tool function).
-            - When using "output", you MUST append EXACTLY ONE subfield.
-                  Examples:
-                      "output.exists"
-                      "output.info.final_filename"
-                      "output.content"
-            - The subfield MUST exist in the tool function’s known output structure as defined in AVAILABLE_AGENTS.
-            - Plain "output" without a subfield is FORBIDDEN.
-            - If a referenced subfield does not exist → ERROR_INVALID_SOP_FORMAT.
+  All steps:
+    conditions: list[]
+    retry: int
+    store_result_as: unique string or null
 
-      operator:
-          MUST be exactly one of:
-            "==" | "!=" | ">" | "<" | ">=" | "<="
-
-      value:
-          A literal value whose type matches the referenced field.
-
-  SOPStep:
-      step_number: int
-      description: str (meaningful description of WHAT the step accomplishes)
-      agent_type: str (MUST match AVAILABLE_AGENTS)
-      execution_mode: "static" | "dynamic"
-
-      action_type:
-          - For "static": {{ "agent": str, "tool": str }}
-          - For "dynamic": null
-
-      params: dict[str, any]
-          RULES:
-            - For static steps, params MUST match EXACTLY the tool's required parameters.
-            - Literal values are allowed.
-            - When referencing previous outputs, ONLY use:
-                  "<store_result_as>"
-                  "<store_result_as>.<field>"
-                  "<store_result_as>.<field>.<subfield>"
-            - These must match actual tool output fields.
-
-      conditions:
-          list[Condition] (or empty list)
-
-      retry: int (number of retries if step fails)
-
-      store_result_as: str | null
-          - Must be UNIQUE across all steps.
-          - Duplicate → ERROR_INVALID_SOP_FORMAT.
-
-  SOP:
-      steps: list[SOPStep]
-      final_target: str | null
-
-  ───────────────────────────
-  ZERO–NULL & NON-NULL RULES
-  ───────────────────────────
-  Only these fields may be null:
+  ────────────────────────────────
+  SOP RULES
+  ────────────────────────────────
+  Only these may be null:
     - action_type
     - store_result_as
     - final_target
 
-  Everything else must be a valid non-null value.
+  params MUST be {{}}
+  conditions MUST be []
+  No other field may be null.
 
-  params MUST be an object: {{}}  
-  conditions MUST be a list: []
+  ────────────────────────────────
+  AGENT & TOOL VALIDATION
+  ────────────────────────────────
+  - agent_type must match AVAILABLE_AGENTS  
+  - static steps → valid tool + exact params  
+  - dynamic steps → action_type=null and params={{}}
+  
+  ────────────────────────────────
+  VALID OUTPUT FORMAT
+  ────────────────────────────────
+  {{
+    "steps": [
+      {{
+        "step_number": <int>,
+        "description": <string>,
+        "agent_type": <string>,
+        "execution_mode": <"static" | "dynamic">,
+        "action_type": <{{ "agent": <string>, "tool": <string> }} | null>,
+        "params": <object>,
+        "conditions": <list>,
+        "retry": <int>,
+        "store_result_as": <string | null>
+      }}
+    ],
+  }}
 
-  ───────────────────────────────
-  AGENT & TOOL VALIDATION RULES
-  ───────────────────────────────
-  - agent_type MUST match an agent from AVAILABLE_AGENTS.
-  - For static steps:
-        tool MUST exist under that agent.
-        params MUST match the tool signature exactly.
-  - For dynamic steps:
-        execution_mode="dynamic"
-        action_type MUST be null
-        params MUST be {{ }}
+  IMPORTANT RULE:
+    If there is an explanation, keep it short and mainly SOP.
+  Any violation → EXACT "ERROR_INVALID_SOP_FORMAT".
 
-  ───────────────────────────────
-  OUTPUT FORMAT RULE
-  ───────────────────────────────
-  Return ONLY the SOP JSON object.
-
-  If ANY part of your output violates ANY rule above,
-  respond EXACTLY with:
-  "ERROR_INVALID_SOP_FORMAT".
 
 
 

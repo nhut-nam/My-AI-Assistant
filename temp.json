@@ -1,0 +1,90 @@
+{
+    "steps": [
+        {
+            "step_number": 1,
+            "description": "Read the content of the file 'F:/numbers.txt'",
+            "agent_type": "CRUDAgent",
+            "execution_mode": "static",
+            "action_type": {
+                "agent": "CRUDAgent",
+                "tool": "read_file"
+            },
+            "params": {
+                "filename": "F:/numbers.txt"
+            },
+            "conditions": [],
+            "retry": 0,
+            "store_result_as": "file_content"
+        },
+        {
+            "step_number": 2,
+            "description": "Extract the first number from the file content",
+            "agent_type": "CRUDAgent",
+            "execution_mode": "dynamic",
+            "action_type": null,
+            "params": {
+                {}
+            },
+            "conditions": [
+                {
+                    "step": 1,
+                    "field": "success",
+                    "operator": "==",
+                    "value": true
+                }
+            ],
+            "retry": 0,
+            "store_result_as": "first_number"
+        },
+        {
+            "step_number": 3,
+            "description": "Calculate the square of the extracted number",
+            "agent_type": "SimpleMathAgent",
+            "execution_mode": "static",
+            "action_type": {
+                "agent": "SimpleMathAgent",
+                "tool": "square"
+            },
+            "params": {
+                "n": "<first_number>"
+            },
+            "conditions": [
+                {
+                    "step": 2,
+                    "field": "success",
+                    "operator": "==",
+                    "value": true
+                }
+            ],
+            "retry": 0,
+            "store_result_as": "square_result"
+        },
+        {
+            "step_number": 4,
+            "description": "Create a new file 'F:/result.txt' and write the square result",
+            "agent_type": "CRUDAgent",
+            "execution_mode": "static",
+            "action_type": {
+                "agent": "CRUDAgent",
+                "tool": "create_file"
+            },
+            "params": {
+                "filename": "result.txt",
+                "content": "<square_result>.result",
+                "type_file": ".txt",
+                "directory": "F:/"
+            },
+            "conditions": [
+                {
+                    "step": 3,
+                    "field": "success",
+                    "operator": "==",
+                    "value": true
+                }
+            ],
+            "retry": 0,
+            "store_result_as": null
+        }
+    ],
+    "final_target": "F:/result.txt"
+}

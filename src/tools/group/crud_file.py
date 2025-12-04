@@ -1,7 +1,7 @@
 import os
 import shutil
 import time
-from typing_extensions import Literal
+from typing_extensions import Literal, Any
 from src.tools.base_tool import BaseTool
 
 
@@ -19,7 +19,7 @@ class CRUDFile(BaseTool):
     @staticmethod
     def create_file(
         filename: str,
-        content: str,
+        content: Any,
         type_file: Literal[".txt", ".py"] = ".txt",
         directory: str | None = None,
     ) -> dict:
@@ -42,6 +42,7 @@ class CRUDFile(BaseTool):
                     path (str|None): Đường dẫn tuyệt đối của file.
                     message (str): Mô tả kết quả.
         """
+        content = str(content)
         try:
             if not filename.endswith(type_file):
                 filename += type_file

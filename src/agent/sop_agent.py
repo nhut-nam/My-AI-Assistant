@@ -66,6 +66,7 @@ class SOPAgent(BaseAgent):
         last_error = None
         sop_dict_str = None
 
+        print(agents_dict)
         for attempt in range(1, self.MAX_RETRY + 1):
             self.info(f"[SOP] Attempt {attempt}")
 
@@ -76,11 +77,8 @@ class SOPAgent(BaseAgent):
             if sop_dict is {} or sop_dict is None:
                 last_error = "Output is not valid JSON or no JSON block found."
                 continue
-            
-            sop_dict_str = str(sop_dict)
 
             # ---- STEP 2: validate ----
-            # print(agents_dict)
             ok, err = validate_sop(sop_dict, agents_dict)
             if ok:
                 self.info("[SOP VALID] SOP passed validation")

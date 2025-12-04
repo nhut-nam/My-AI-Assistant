@@ -1,6 +1,6 @@
 groq:
   model_name: "qwen/qwen3-32b"
-  temperature: 0.2
+  temperature: 0.9
   max_tokens: 2048
 
 ollama:

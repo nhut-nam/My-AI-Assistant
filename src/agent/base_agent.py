@@ -113,6 +113,7 @@ class BaseAgent(LoggerMixin, ABC):
     def _create_agent(self):
         return create_agent(
             model=self.llm,
+            tools=self._tools,
         )
     
     @abstractmethod

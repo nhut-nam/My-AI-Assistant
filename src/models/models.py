@@ -7,7 +7,7 @@ from typing_extensions import TypedDict
 class Response(BaseModel):
     """Response to user."""
     status: Literal["Success", "Fail"]
-    response: str = Field(
+    result: Any = Field(
         description="Reason why Fail"
     )
 

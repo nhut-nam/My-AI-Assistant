@@ -124,7 +124,7 @@ class ExecutorAgent(LoggerMixin):
             left_value = self.extract_field_from_toolresponse(prev, cond.field)
             op = self.OPERATORS[cond.operator]
             right_value = cond.value
-
+            print(f"Checking condition: {left_value} {cond.operator} {right_value}")
             if not op(left_value, right_value):
                 self.info(
                     f"[SKIP] Condition failed: {left_value} {cond.operator} {right_value}"
@@ -200,8 +200,8 @@ class ExecutorAgent(LoggerMixin):
 
             for _ in range(step.retry + 1):
                 try:
-                    raw_output = await agent.invoke(**params)
-                    resp = ToolResponse(success=True, output=raw_output)
+                    raw_output = await agent.invoke(params=params, query=step.description)
+                    resp = ToolResponse(success=True, output=raw_output["result"])
                     break
                 except Exception as e:
                     resp = ToolResponse(success=False, error=str(e))

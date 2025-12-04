@@ -19,7 +19,7 @@ class SOPStepDispatcher(LoggerMixin):
         """
         Nhận plan từ PlannerAgent để biết agent nào cung cấp tool descriptions.
         """
-        agent_str = "\n\n".join(agent.to_string() for agent in self.agents)
+        agent_str = "[" + ",\n\n".join(agent.to_string() for agent in self.agents) + "]"
 
         sop = await self.sop_agent.invoke(plan, agent_str)
 
