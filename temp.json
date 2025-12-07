@@ -2,7 +2,7 @@
     "steps": [
         {
             "step_number": 1,
-            "description": "Read the content of the file 'F:/numbers.txt'",
+            "description": "Read the content of the file at F:/numbers.txt",
             "agent_type": "CRUDAgent",
             "execution_mode": "static",
             "action_type": {
@@ -14,7 +14,9 @@
             },
             "conditions": [],
             "retry": 0,
-            "store_result_as": "file_content"
+            "store_result_as": "file_content",
+            "next_step_on_success": 2,
+            "next_step_on_failure": null
         },
         {
             "step_number": 2,
@@ -23,18 +25,13 @@
             "execution_mode": "dynamic",
             "action_type": null,
             "params": {
-                {}
+                "filename": "<file_content>.content"
             },
-            "conditions": [
-                {
-                    "step": 1,
-                    "field": "success",
-                    "operator": "==",
-                    "value": true
-                }
-            ],
+            "conditions": [],
             "retry": 0,
-            "store_result_as": "first_number"
+            "store_result_as": "first_number",
+            "next_step_on_success": 3,
+            "next_step_on_failure": null
         },
         {
             "step_number": 3,
@@ -46,22 +43,17 @@
                 "tool": "square"
             },
             "params": {
-                "n": "<first_number>"
+                "n": "<first_number>.output.result"
             },
-            "conditions": [
-                {
-                    "step": 2,
-                    "field": "success",
-                    "operator": "==",
-                    "value": true
-                }
-            ],
+            "conditions": [],
             "retry": 0,
-            "store_result_as": "square_result"
+            "store_result_as": "square_result",
+            "next_step_on_success": 4,
+            "next_step_on_failure": null
         },
         {
             "step_number": 4,
-            "description": "Create a new file 'F:/result.txt' and write the square result",
+            "description": "Create F:/result.txt and write the square result into it",
             "agent_type": "CRUDAgent",
             "execution_mode": "static",
             "action_type": {
@@ -69,22 +61,15 @@
                 "tool": "create_file"
             },
             "params": {
-                "filename": "result.txt",
-                "content": "<square_result>.result",
-                "type_file": ".txt",
-                "directory": "F:/"
+                "filename": "F:/result.txt",
+                "content": "<square_result>.output.result",
+                "type_file": ".txt"
             },
-            "conditions": [
-                {
-                    "step": 3,
-                    "field": "success",
-                    "operator": "==",
-                    "value": true
-                }
-            ],
+            "conditions": [],
             "retry": 0,
-            "store_result_as": null
+            "store_result_as": "final_result",
+            "next_step_on_success": null,
+            "next_step_on_failure": null
         }
-    ],
-    "final_target": "F:/result.txt"
+    ]
 }

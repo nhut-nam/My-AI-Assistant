@@ -156,6 +156,16 @@ class SOPStep(BaseModel):
         description="Biến để lưu output vào execution context."
     )
 
+    next_step_on_success: Optional[int] = Field(
+        None,
+        description="Step number kế tiếp nếu step hiện tại thành công."
+    )
+
+    next_step_on_failure: Optional[int] = Field(
+        None,
+        description="Step number kế tiếp nếu step hiện tại thất bại."
+    )
+
 
 class SOP(BaseModel):
     """

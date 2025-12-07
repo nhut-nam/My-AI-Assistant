@@ -140,6 +140,8 @@ sop_prompt: |
     conditions: list[]
     retry: int
     store_result_as: unique string or null
+    next_step_on_success: optional int or null, step number to go to on success
+    next_step_on_failure: optional int or null, step number to go to on failure
 
   ────────────────────────────────
   SOP RULES
@@ -147,7 +149,9 @@ sop_prompt: |
   Only these may be null:
     - action_type
     - store_result_as
-    - final_target
+    - final_target: str
+      This is your response and steps's result combined.
+      response from store_result_as of all needed steps, it can be store more than one step's result combined.
 
   params MUST be {{}}
   conditions MUST be []
@@ -174,7 +178,9 @@ sop_prompt: |
         "params": <object>,
         "conditions": <list>,
         "retry": <int>,
-        "store_result_as": <string | null>
+        "store_result_as": <string | null>,
+        "next_step_on_success": <int | null>,
+        "next_step_on_failure": <int | null>
       }}
     ],
   }}
