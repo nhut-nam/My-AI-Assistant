@@ -2,24 +2,33 @@ from src.agent.base_agent import BaseAgent
 from src.models.models import Plan
 from src.prompt_engineering.templates import PLANNER_PROMPT
 from langchain_core.prompts import ChatPromptTemplate
-
+from src.handler.error_handler import ErrorSeverity
+from src.agent.plan_critic import PlanCriticAgent
 
 class PlannerAgent(BaseAgent):
     """
     Planner Agent:
     - tạo kế hoạch (Plan)
     """
+    MAX_RETRY = 3
 
-    def __init__(self, llm, tools = None, name = None, description="", log_dir = "logs"):
+    def __init__(self, llm, tools=None, name=None, description="", log_dir="logs"):
         super().__init__(llm, tools, name, description, log_dir)
         self.planner_prompt = PLANNER_PROMPT
+        self.critic_agent = PlanCriticAgent(llm=llm)
 
+    # ------------------------------------------------------------
+    # BUILD PROMPT — thêm biến {error_message} & {attempt}
+    # ------------------------------------------------------------
     def build_prompt(self):
-        """Build template chuẩn SYSTEM + placeholder messages."""
+        """
+        Build template chuẩn SYSTEM + placeholder messages.
+        Cho phép truyền biến attempt và error_message vào hệ thống.
+        """
         return ChatPromptTemplate.from_messages(
             [
                 ("system", self.planner_prompt),
-                ("placeholder", "{messages}")
+                ("human", "{messages}"),
             ]
         )
 
@@ -28,13 +37,83 @@ class PlannerAgent(BaseAgent):
         prompt = self.build_prompt()
         return prompt | self.llm.with_structured_output(Plan)
 
+    # ------------------------------------------------------------
+    # INVOKE
+    # ------------------------------------------------------------
     async def invoke(self, query: str):
-        """Trả về dict {'plan': [...]} đúng spec LangGraph."""
         self.debug(f"[PlannerAgent] Generating plan for: {query}")
 
         chain = self.chain()
-        result = await chain.ainvoke({"messages": [("user", query)]})
+        last_error_message = "None"
 
-        self.info(f"[PlannerAgent] Plan generated: {result.steps}")
+        for attempt in range(1, self.MAX_RETRY + 1):   # bắt đầu từ 1
+            try:
+                self.debug(f"[PlannerAgent] Attempt {attempt}/{self.MAX_RETRY}")
 
-        return result
+                # --------------------------------------------------------
+                # 1) TẠO THÔNG ĐIỆP ĐẦU VÀO CHO PLANNER_PROMPT
+                # --------------------------------------------------------
+                system_vars = {
+                    "attempt": attempt,
+                    "error_message": last_error_message
+                }
+
+                # 2) GENERATE PLAN với biến attempt + error_message
+                result = await chain.ainvoke({
+                    "messages": [("user", query)],
+                    **system_vars
+                })
+                print("Generated Plan: ", result)
+
+                # --------------------------------------------------------
+                # 3) CRITIC CHECK
+                # --------------------------------------------------------
+                critic_resp = await self.critic_agent.invoke(plan=result, query=query)
+
+                if not critic_resp.get("success"):
+                    last_error_message = f"Critic failed: {critic_resp.get('error')}"
+                    self.warning(last_error_message)
+                    continue
+
+                critic = critic_resp["feedback"]
+                score = critic.score
+
+                if score < 100:
+                    issue_descriptions = [
+                        f"{issue.severity.upper()}: {issue.description}"
+                        for issue in critic.issues
+                    ]
+
+                    last_error_message = (
+                        f"Plan rejected (score {score}/100):\n"
+                        + "\n".join(issue_descriptions)
+                    )
+
+                    self.warning(last_error_message)
+                    continue  # thử lại
+
+                # --------------------------------------------------------
+                # 4) ACCEPT PLAN
+                # --------------------------------------------------------
+                self.info("[PlannerAgent] Plan accepted with PERFECT score 100.")
+                return result
+
+            except Exception as e:
+                agent_error = self.error_handler.handle_exception(
+                    e, source="PlannerAgent.invoke"
+                )
+
+                last_error_message = f"{agent_error.error_type}: {agent_error.message}"
+
+                self.warning(
+                    f"[PlannerAgent] Attempt {attempt} failed: {last_error_message}"
+                )
+
+                if agent_error.severity != ErrorSeverity.RECOVERABLE:
+                    break
+
+        # --------------------------------------------------------
+        # 5) FAIL SAU NHIỀU LẦN THỬ
+        # --------------------------------------------------------
+        self.error(f"[PlannerAgent] Failed after {self.MAX_RETRY} attempts.")
+        return last_error_message

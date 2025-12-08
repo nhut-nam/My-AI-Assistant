@@ -7,6 +7,7 @@ from src.tools.base_tool import BaseTool
 from src.llm.base import BaseClient
 from src.models.models import Response
 from langchain.agents import create_agent
+from src.handler.error_handler import ErrorHandler
 import json
 
 class BaseAgent(LoggerMixin, ABC):
@@ -31,6 +32,7 @@ class BaseAgent(LoggerMixin, ABC):
         self._tools: List[Callable] = []
         self.agent = self._create_agent()
         self.description = description
+        self.error_handler = ErrorHandler()
 
         if tools:
             for t in tools:

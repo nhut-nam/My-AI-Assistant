@@ -78,6 +78,10 @@ class Condition(BaseModel):
         ..., description="Giá trị để so sánh với field đã chọn."
     )
 
+    jump_to_step_on_failure: Optional[int] = Field(
+        None, description="Step number để nhảy tới nếu điều kiện sai."
+    )
+
     @field_validator("field")
     def validate_field_format(cls, v):
         """

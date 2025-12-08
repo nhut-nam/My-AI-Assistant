@@ -89,7 +89,7 @@ class CRUDFile(BaseTool):
     @staticmethod
     def edit_file(
         filename: str,
-        new_content: str,
+        new_content: Any,
         mode: Literal["overwrite", "append"] = "overwrite",
     ) -> dict:
         """
@@ -111,6 +111,7 @@ class CRUDFile(BaseTool):
                     mode (str)
                     message (str)
         """
+        new_content = str(new_content)
         try:
             abs_path = os.path.abspath(filename)
             if not os.path.exists(abs_path):

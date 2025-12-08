@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 import operator
 import re
 from langgraph.graph import StateGraph, START, END  # for interoperability / visualization
+from src.handler.error_handler import ErrorHandler, ErrorSeverity
 
 
 class ExecutorAgent(LoggerMixin):
@@ -24,6 +25,7 @@ class ExecutorAgent(LoggerMixin):
         self.agents: Dict[str, BaseAgent] = {}
         self.context: Dict[str, Any] = {}            # store_result_as → output
         self.step_results: Dict[int, ToolResponse] = {}  # step_number → ToolResponse
+        self.error_handler = ErrorHandler()
 
         # graph runner tunables
         self.max_visits_per_step = 10  # avoid infinite loops
@@ -190,7 +192,16 @@ class ExecutorAgent(LoggerMixin):
                     resp = ToolResponse(success=True, output=raw_output)
                     break
                 except Exception as e:
-                    last_exc = e
+                    error = self.error_handler.handle_exception(e, source=f"ExecutorAgent.execute_step[{step.step_number}]")
+                    last_exc = error
+
+                    if error.severity != ErrorSeverity.RECOVERABLE:
+                        self.error(
+                            f"[STEP {step.step_number}] Non-recoverable error: "
+                            f"{error.error_type} - {error.message}"
+                        )
+                        resp = ToolResponse(success=False, error=error.message)
+                        break
                     resp = ToolResponse(success=False, error=str(e))
 
             if last_exc and not resp.success:
@@ -380,6 +391,46 @@ class ExecutorAgent(LoggerMixin):
             "context": self.context
         }
 
+    def resolve_template(self, template: str) -> str:
+        """
+        Resolve templates like:
+        'File created at <create_file>.meta.path'
+        Supports multiple <var> inside one string.
+        """
+
+        if not isinstance(template, str):
+            return template
+
+        # pattern tìm tất cả <var> hoặc <var>.field.deep
+        pattern = r"<([a-zA-Z_][a-zA-Z0-9_]*)(?:\.(.+?))?>"
+
+        def replacer(match):
+            var_name = match.group(1)
+            field_path = match.group(2)
+
+            if var_name not in self.context:
+                return f"<undefined:{var_name}>"
+
+            value = self.context[var_name]
+
+            # nếu không có field deep → return variable object (as str)
+            if field_path is None:
+                return str(value)
+
+            # đi sâu vào dict
+            current = value
+            for part in field_path.split("."):
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    return f"<undefined:{var_name}.{field_path}>"
+
+            return str(current)
+
+        # Replace all placeholders
+        return re.sub(pattern, replacer, template)
+
+
     # --------------------------------------------------
     # RUN FULL SOP (auto-detect graph needs)
     # --------------------------------------------------
@@ -428,9 +479,11 @@ class ExecutorAgent(LoggerMixin):
                     "context": self.context,
                 }
 
+        resolved_final = self.resolve_final_target(sop.final_target)
+
         return {
             "success": True,
-            "final_target": sop.final_target,
+            "final_target": resolved_final,
             "steps": [r.dict() for r in results],
             "context": self.context,
         }
