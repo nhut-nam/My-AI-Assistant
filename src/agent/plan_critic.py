@@ -60,7 +60,7 @@ class PlanCriticAgent(BaseAgent):
             Your task:
             - Evaluate whether the plan contains ALL necessary steps to achieve the goal.
             - Check if the order of steps is logically correct.
-            - Identify if the plan is missing any essential step.
+            - Identify if the plan is missing any essential step. Example: if user wants to stop execution upon condition, plan must include that check.
             - Do NOT evaluate edge cases such as file permissions, read-only files, or runtime exceptions.
             - Do NOT require error handling, safety guards, or robustness features.
             - Only check: "Does this plan contain all required steps to successfully perform the described task?"

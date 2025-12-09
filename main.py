@@ -19,7 +19,7 @@ async def main():
     llm = GroqClient()
     llm_ollama = OllamaClient()
     agent = PlannerAgent(llm=llm)
-    response = await agent.invoke("Tạo file tên là new_result.txt trong thư mục F:/ với nội dung là bình phương của số 8 nếu file tồn tại rồi thì không cần làm gì cả đừng cố gắng thay đổi nội dung file")
+    response = await agent.invoke("Lấy kết quả từ file F:/result.txt so sánh có bằng số 67 không nếu bằng thì hãy tạo ra file mới F:/troll_2.txt với nội dung 'sybau'.")
 
     crud_agent = CRUDAgent(llm=llm_ollama)
     simple_math_agent = SimpleMathAgent(llm=llm_ollama)
