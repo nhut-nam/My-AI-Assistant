@@ -64,38 +64,6 @@ class PlannerAgent(BaseAgent):
                     **system_vars
                 })
                 print("Generated Plan: ", result)
-
-                # --------------------------------------------------------
-                # 3) CRITIC CHECK
-                # --------------------------------------------------------
-                critic_resp = await self.critic_agent.invoke(plan=result, query=query)
-
-                if not critic_resp.get("success"):
-                    last_error_message = f"Critic failed: {critic_resp.get('error')}"
-                    self.warning(last_error_message)
-                    continue
-
-                critic = critic_resp["feedback"]
-                score = critic.score
-
-                if score < 100:
-                    issue_descriptions = [
-                        f"{issue.severity.upper()}: {issue.description}"
-                        for issue in critic.issues
-                    ]
-
-                    last_error_message = (
-                        f"Plan rejected (score {score}/100):\n"
-                        + "\n".join(issue_descriptions)
-                    )
-
-                    self.warning(last_error_message)
-                    continue  # thử lại
-
-                # --------------------------------------------------------
-                # 4) ACCEPT PLAN
-                # --------------------------------------------------------
-                self.info("[PlannerAgent] Plan accepted with PERFECT score 100.")
                 return result
 
             except Exception as e:

@@ -182,5 +182,35 @@ class SOP(BaseModel):
         None, description="Mục tiêu cuối cùng của SOP."
     )
 
+class CriticIssue(BaseModel):
+    description: str = Field(..., description="Mô tả vấn đề phát hiện trong plan")
+    severity: str = Field(
+        ...,
+        description="Mức độ nghiêm trọng: none | low | medium | high | critical"
+    )
+    impact: str = Field(
+        ...,
+        description="Hậu quả hoặc rủi ro tiềm năng nếu vấn đề không được xử lý"
+    )
 
+
+class CriticFeedback(BaseModel):
+    score: int = Field(..., description="Điểm đánh giá tổng thể (0–100)")
+    issues: list[CriticIssue] = Field(..., description="Danh sách vấn đề được phát hiện")
+    summary: str = Field(..., description="Tóm tắt đánh giá + Pass/Fail")
+
+
+class SynthesizedCriticReport(BaseModel):
+    summary: str = Field(..., description="Tóm tắt ngắn gọn kết quả phân tích.")
+    key_failures: list[str] = Field(..., description="Các lỗi quan trọng rút ra từ execution + SOP result.")
+    improvement_advice: list[str] = Field(..., description="Gợi ý cải thiện SOP hoặc Planner.")
+    risk_level: str = Field(..., description="Đánh giá rủi ro tổng thể: low | medium | high | critical")
+
+class StateSchema(BaseModel):
+    user_request: str
+    plan: Optional[Plan] = None
+    critic: Dict[str, Any] = Field(default_factory=dict)
+    sop: Optional[SOP] = None
+    exec_result: Dict[str, Any] = Field(default_factory=dict)
+    retry: int = 3
 

@@ -2,7 +2,7 @@
     "steps": [
         {
             "step_number": 1,
-            "description": "Read the content of the file at F:/numbers.txt",
+            "description": "Read the contents of the file located at F:/result.txt",
             "agent_type": "CRUDAgent",
             "execution_mode": "static",
             "action_type": {
@@ -10,50 +10,16 @@
                 "tool": "read_file"
             },
             "params": {
-                "filename": "F:/numbers.txt"
+                "filename": "F:/result.txt"
             },
             "conditions": [],
             "retry": 0,
-            "store_result_as": "file_content",
-            "next_step_on_success": 2,
-            "next_step_on_failure": null
+            "store_result_as": "read_result",
+            "condition_to_jump_step": null
         },
         {
             "step_number": 2,
-            "description": "Extract the first number from the file content",
-            "agent_type": "CRUDAgent",
-            "execution_mode": "dynamic",
-            "action_type": null,
-            "params": {
-                "filename": "<file_content>.content"
-            },
-            "conditions": [],
-            "retry": 0,
-            "store_result_as": "first_number",
-            "next_step_on_success": 3,
-            "next_step_on_failure": null
-        },
-        {
-            "step_number": 3,
-            "description": "Calculate the square of the extracted number",
-            "agent_type": "SimpleMathAgent",
-            "execution_mode": "static",
-            "action_type": {
-                "agent": "SimpleMathAgent",
-                "tool": "square"
-            },
-            "params": {
-                "n": "<first_number>.output.result"
-            },
-            "conditions": [],
-            "retry": 0,
-            "store_result_as": "square_result",
-            "next_step_on_success": 4,
-            "next_step_on_failure": null
-        },
-        {
-            "step_number": 4,
-            "description": "Create F:/result.txt and write the square result into it",
+            "description": "Create a new file at F:/troll_2.txt containing the text 'sybau' if the read value equals 67",
             "agent_type": "CRUDAgent",
             "execution_mode": "static",
             "action_type": {
@@ -61,15 +27,37 @@
                 "tool": "create_file"
             },
             "params": {
-                "filename": "F:/result.txt",
-                "content": "<square_result>.output.result",
-                "type_file": ".txt"
+                "filename": "F:/troll_2.txt",
+                "content": "sybau",
+                "type_file": ".txt",
+                "directory": null
             },
+            "conditions": [
+                {
+                    "step": 1,
+                    "field": "output.content",
+                    "operator": "==",
+                    "value": "67",
+                    "jump_to_step_on_success": null,
+                    "jump_to_step_on_failure": null
+                }
+            ],
+            "retry": 0,
+            "store_result_as": "create_result",
+            "condition_to_jump_step": null
+        },
+        {
+            "step_number": 3,
+            "description": "Provide a result indicating whether the new file was created",
+            "agent_type": "CRUDAgent",
+            "execution_mode": "dynamic",
+            "action_type": null,
+            "params": {},
             "conditions": [],
             "retry": 0,
-            "store_result_as": "final_result",
-            "next_step_on_success": null,
-            "next_step_on_failure": null
+            "store_result_as": "final_output",
+            "condition_to_jump_step": null
         }
-    ]
+    ],
+    "final_target": null
 }
