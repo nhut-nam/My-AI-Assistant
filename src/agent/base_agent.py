@@ -85,6 +85,9 @@ class BaseAgent(LoggerMixin, ABC):
         tools = BaseTool.get_tools_by_group(group_name=category)
         [self._tools.append(tool) for tool in tools]
         self.info(f"Registered tool successfully: {tools}")
+        
+    def get_tools(self):
+        return self._tools
 
 
     def list_tools(self) -> List[str]:
@@ -95,6 +98,7 @@ class BaseAgent(LoggerMixin, ABC):
         return [tool.__name__ for tool in self._tools if callable(tool)]
     
     def get_tool_descriptions(self) -> Dict[str, str]:
+        
         return {
             tool.__name__: (tool.__doc__ or "No description available.")
             for tool in self._tools
@@ -127,12 +131,7 @@ class BaseAgent(LoggerMixin, ABC):
         raise NotImplementedError
     
     def __str__(self):
-        tools = self.get_tool_descriptions()
-        return json.dumps({self.__class__.__name__: {
-            "agent_name": self.__class__.__name__,
-            "description": self.description,
-            "tools": tools
-        }}, ensure_ascii=False, indent=2)
+        return BaseTool.get_tools_grouped_str_by_callables(tools=self._tools)
     
     def __repr__(self):
         return self.__str__()

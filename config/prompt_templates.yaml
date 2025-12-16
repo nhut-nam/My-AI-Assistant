@@ -6,8 +6,8 @@ planner_prompt: |
 
   Target help SOP agent understand your plan.
 
-  PreviousError: {{error_message}}
-  AttemptNumber: {{attempt}}
+  PreviousError: {error_message}
+  AttemptNumber: {attempt}
 
   ────────────────────────────────────────
   CORE RULES
@@ -58,34 +58,6 @@ planner_prompt: |
   ────────────────────────────────────────
   Return the plan using the Plan schema.
   No additional text outside the Plan object.
-
-
-
-replanner_prompt: |
-  For the given objective, come up with a simple step by step plan.
-  This plan should involve individual tasks, that if executed correctly will yield the correct answer.
-  Do not add any superfluous steps.
-  The result of the final step should be the final answer.
-  Make sure that each step has all the information needed - do not skip steps.
-
-  Your objective was this:
-  {input}
-
-  Your original plan was this:
-  {plan}
-
-  You have currently done the following steps:
-  {past_steps}
-
-  Update your plan accordingly.
-  If no more steps are needed and you can return to the user using the Response class,
-  then respond with that.
-  Otherwise, fill out the plan.
-  Only add steps to the plan that still NEED to be done.
-  Do not return previously done steps as part of the plan.
-
-
-  You are the SOP (Standard Operation Procedure) Engine.
 
 sop_prompt: |
   Your job: Convert the given PLAN and AVAILABLE_AGENTS into one SOP JSON object EXACTLY following the schema below.  

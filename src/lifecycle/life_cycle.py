@@ -21,16 +21,13 @@ class LifeCycle(LoggerMixin):
         super().__init__("LifeCycle")
         self.info("[LifeCycle] Initializing...")
 
-        # Shared LLMs
         self.llm = GroqClient()
         self.llm_ollama = OllamaClient()
 
-        # AGENTS
         self.planner = PlannerAgent(llm=self.llm)
         self.critic = PlanCriticAgent(llm=self.llm)
         self.sop_agent = SOPAgent(llm=self.llm)
 
-        # TOOLS + EXECUTOR
         self.base_tool = BaseTool()
         self.base_tool.auto_discover("src.tools.group")
 
@@ -46,7 +43,6 @@ class LifeCycle(LoggerMixin):
         self.executor.register_agent(self.crud)
         self.executor.register_agent(self.math)
 
-        # BUILD THE GRAPH
         self.workflow = self._build_graph()
 
     # ───────────────────────────────────────────────────────────
@@ -60,7 +56,11 @@ class LifeCycle(LoggerMixin):
         # NODE 1 — Planner
         # -----------------------------------------------------
         async def planner_node(state: StateSchema):
-            plan = await self.planner.invoke(state.user_request)
+            if state.critic:
+                self.info(f"[LifeCycle] Re-planning due to critic feedback. Retry #{state.retry + 1}")
+                plan = await self.planner.invoke(state.user_request, error_message=state.critic.get("error_message", ""), attempt=state.retry + 1)
+            else:
+                plan = await self.planner.invoke(state.user_request)
             state.plan = plan
             return state
 

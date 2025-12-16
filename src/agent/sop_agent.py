@@ -6,7 +6,6 @@ from src.serializer.serializer import SmartSerializer
 from src.models.models import SOP
 import json
 
-
 class SOPAgent(BaseAgent):
 
     def __init__(self, llm, tools=None, name=None, log_dir="logs"):
@@ -47,26 +46,14 @@ class SOPAgent(BaseAgent):
         self.info(f"[SOP RAW OUTPUT] {raw}")
         return raw
 
-    async def invoke(self, plan, agents):
+    async def invoke(self, plan, agents_str, agent_dict):
         """
         Full SOP generation with auto-repair loop.
         """
-
-        # Make sure agents is dict
-        if isinstance(agents, str):
-            try:
-                agents_dict = json.loads(agents)
-            except:
-                raise ValueError("agents_str is not valid JSON")
-        else:
-            agents_dict = agents
-
-        agents_str = json.dumps(agents_dict, indent=2)
         plan_str = "\n".join(f"{i+1}. {s}" for i, s in enumerate(plan.steps))
         last_error = None
         sop_dict_str = None
-
-        print(agents_dict)
+        
         for attempt in range(1, self.MAX_RETRY + 1):
             self.info(f"[SOP] Attempt {attempt}")
 
@@ -79,7 +66,7 @@ class SOPAgent(BaseAgent):
                 continue
 
             # ---- STEP 2: validate ----
-            ok, err = validate_sop(sop_dict, agents_dict)
+            ok, err = validate_sop(sop_dict, agent_dict)
             if ok:
                 self.info("[SOP VALID] SOP passed validation")
                 sop = SmartSerializer.parse_model(model=SOP, data=sop_dict)

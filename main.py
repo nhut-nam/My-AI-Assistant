@@ -15,26 +15,26 @@ import asyncio
 async def main():
     base_tool = BaseTool()
     base_tool.auto_discover(package_name="src.tools.group")
+    print(base_tool.get_all_tools_grouped())
+    # llm = GroqClient()
+    # llm_ollama = OllamaClient()
+    # agent = PlannerAgent(llm=llm)
+    # response = await agent.invoke("Lấy kết quả từ file F:/result.txt so sánh có bằng số 67 nếu bằng thì hãy tạo ra file mới F:/troll_2.txt với nội dung 'sybau'.")
 
-    llm = GroqClient()
-    llm_ollama = OllamaClient()
-    agent = PlannerAgent(llm=llm)
-    response = await agent.invoke("Lấy kết quả từ file F:/result.txt so sánh có bằng số 67 nếu bằng thì hãy tạo ra file mới F:/troll_2.txt với nội dung 'sybau'.")
+    # crud_agent = CRUDAgent(llm=llm_ollama)
+    # simple_math_agent = SimpleMathAgent(llm=llm_ollama)
+    # crud_agent.register_tool(tool=base_tool.get_tools_by_group(group_name="file"))
+    # simple_math_agent.register_tool(tool=base_tool.get_tools_by_group(group_name="math"))
 
-    crud_agent = CRUDAgent(llm=llm_ollama)
-    simple_math_agent = SimpleMathAgent(llm=llm_ollama)
-    crud_agent.register_tool(tool=base_tool.get_tools_by_group(group_name="file"))
-    simple_math_agent.register_tool(tool=base_tool.get_tools_by_group(group_name="math"))
-
-    sop = SOPAgent(llm=llm)
-    sop_dispatcher = SOPStepDispatcher(sop_agent=sop, agents=[crud_agent, simple_math_agent])
-    sop_result = await sop_dispatcher.build_sop(plan=response)
+    # sop = SOPAgent(llm=llm)
+    # sop_dispatcher = SOPStepDispatcher(sop_agent=sop, agents=[crud_agent, simple_math_agent])
+    # sop_result = await sop_dispatcher.build_sop(plan=response)
     # print("SOP RESULT: ", sop_result)
     # print(agent.list_tools())
     # agent.safe_call_tool(name="create_file", filename="F:/namdeptraiqua", content="Nam đẹp trai quá", type_file=".txt")
-    if sop_result is None:
-        print("SOP generation failed.")
-        return
+    # if sop_result is None:
+    #     print("SOP generation failed.")
+    #     return
 #     data = {
 #   "steps": [
 #     {
@@ -126,10 +126,10 @@ async def main():
     
 #     sop_result = SmartSerializer.parse_model(model=SOP, 
 #                                              data=data)
-    exec_agent = ExecutorAgent()
-    exec_agent.register_agent(agent=crud_agent)
-    exec_agent.register_agent(agent=simple_math_agent)
-    print(await exec_agent.run_sop(sop_result))
+    # exec_agent = ExecutorAgent()
+    # exec_agent.register_agent(agent=crud_agent)
+    # exec_agent.register_agent(agent=simple_math_agent)
+    # print(await exec_agent.run_sop(sop_result))
 
 
 if __name__ == "__main__":

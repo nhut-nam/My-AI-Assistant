@@ -20,27 +20,30 @@ class PlannerAgent(BaseAgent):
     # ------------------------------------------------------------
     # BUILD PROMPT — thêm biến {error_message} & {attempt}
     # ------------------------------------------------------------
-    def build_prompt(self):
+    def build_prompt(self, error_message: str = "", attempt: int = 1):
         """
         Build template chuẩn SYSTEM + placeholder messages.
         Cho phép truyền biến attempt và error_message vào hệ thống.
         """
         return ChatPromptTemplate.from_messages(
             [
-                ("system", self.planner_prompt),
+                ("system", self.planner_prompt.format(
+                    error_message=error_message,
+                    attempt=attempt
+                )),
                 ("human", "{messages}"),
             ]
         )
 
-    def chain(self):
+    def chain(self, error_message: str = "", attempt: int = 1):
         """Prompt → LLM → Structured Plan."""
-        prompt = self.build_prompt()
+        prompt = self.build_prompt(error_message=error_message, attempt=attempt)
         return prompt | self.llm.with_structured_output(Plan)
 
     # ------------------------------------------------------------
     # INVOKE
     # ------------------------------------------------------------
-    async def invoke(self, query: str):
+    async def invoke(self, query: str, error_message: str = "", attempt: int = 1) -> Plan:
         self.debug(f"[PlannerAgent] Generating plan for: {query}")
 
         chain = self.chain()

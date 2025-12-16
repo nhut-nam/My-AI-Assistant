@@ -25,22 +25,6 @@ class CRUDFile(BaseTool):
     ) -> dict:
         """
         Tạo file mới và ghi nội dung.
-
-        Params:
-            filename (str): Tên file (có thể thiếu extension).
-            content (str): Nội dung cần ghi vào file.
-            type_file (".txt" | ".py"): Extension mặc định nếu filename thiếu đuôi.
-            directory (str|None): Thư mục đích (None = thư mục hiện tại).
-
-        Returns:
-            dict:
-                success (bool): True nếu tạo thành công.
-                error (str|None): Lỗi xảy ra (nếu có).
-                meta (dict):
-                    action (str): "create_file".
-                    filename (str): Tên file sau khi xử lý extension.
-                    path (str|None): Đường dẫn tuyệt đối của file.
-                    message (str): Mô tả kết quả.
         """
         content = str(content)
         try:
@@ -94,22 +78,6 @@ class CRUDFile(BaseTool):
     ) -> dict:
         """
         Ghi đè hoặc nối thêm nội dung vào file.
-
-        Params:
-            filename (str): Đường dẫn file.
-            new_content (str): Nội dung mới.
-            mode ("overwrite" | "append"): Kiểu ghi.
-
-        Returns:
-            dict:
-                success (bool): True nếu chỉnh sửa thành công.
-                error (str|None): Lỗi nếu có.
-                meta:
-                    action (str): "edit_file".
-                    filename (str)
-                    path (str|None)
-                    mode (str)
-                    message (str)
         """
         new_content = str(new_content)
         try:
@@ -163,15 +131,6 @@ class CRUDFile(BaseTool):
     def delete_file(filename: str) -> dict:
         """
         Xóa file nếu tồn tại.
-
-        Params:
-            filename (str): Đường dẫn file.
-
-        Returns:
-            dict:
-                success (bool)
-                error (str|None)
-                meta {action, filename, path, message}
         """
         try:
             abs_path = os.path.abspath(filename)
@@ -219,16 +178,6 @@ class CRUDFile(BaseTool):
     def read_file(filename: str) -> dict:
         """
         Đọc nội dung file dạng text.
-
-        Params:
-            filename (str): Đường dẫn file.
-
-        Returns:
-            dict:
-                success (bool)
-                error (str|None)
-                content (str|None): Nội dung file.
-                meta {action, filename, path, message}
         """
         try:
             abs_path = os.path.abspath(filename)
@@ -280,15 +229,6 @@ class CRUDFile(BaseTool):
     def rename_file(old_name: str, new_name: str) -> dict:
         """
         Đổi tên file hoặc di chuyển file.
-
-        Params:
-            old_name (str): File gốc.
-            new_name (str): Tên mới hoặc đường dẫn mới.
-
-        Returns:
-            dict:
-                success, error,
-                meta {action, old_filename, new_filename, path, message}
         """
         try:
             abs_old = os.path.abspath(old_name)
@@ -341,15 +281,6 @@ class CRUDFile(BaseTool):
     def copy_file(src: str, dest: str) -> dict:
         """
         Sao chép file từ src sang dest.
-
-        Params:
-            src (str): File nguồn.
-            dest (str): File đích.
-
-        Returns:
-            dict:
-                success, error,
-                meta {action, source_filename, destination_filename, path, message}
         """
         try:
             abs_src = os.path.abspath(src)
@@ -402,15 +333,6 @@ class CRUDFile(BaseTool):
     def file_info(filename: str) -> dict:
         """
         Lấy thông tin file.
-
-        Params:
-            filename (str): Đường dẫn file.
-
-        Returns:
-            dict:
-                success, error,
-                info {size, created, modified} | None
-                meta {action, filename, path, message}
         """
         try:
             abs_path = os.path.abspath(filename)
@@ -466,16 +388,6 @@ class CRUDFile(BaseTool):
     def check_file_exists(filename: str) -> dict:
         """
         Kiểm tra file có tồn tại.
-
-        Params:
-            filename (str): Đường dẫn file.
-
-        Returns:
-            dict:
-                success (bool)
-                error (str|None)
-                exists (bool): True nếu file tồn tại.
-                meta {action, filename, path, message}
         """
         try:
             abs_path = os.path.abspath(filename)
@@ -514,18 +426,6 @@ class CRUDFile(BaseTool):
     def identify_target_file(filename: str) -> dict:
         """
         Chuẩn hóa tên file (auto thêm .txt).
-
-        Params:
-            filename (str): Tên file gốc.
-
-        Returns:
-            dict:
-                success (bool)
-                error (str|None)
-                info:
-                    final_filename (str)
-                    extension (str)
-                meta {action, filename, final_filename, extension, message}
         """
         try:
             base, ext = os.path.splitext(filename)

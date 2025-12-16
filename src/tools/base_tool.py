@@ -4,6 +4,46 @@ import pkgutil
 from functools import wraps
 from collections import defaultdict
 from src.utils.logger import LoggerMixin
+import inspect
+from typing import Any, Union, get_origin, get_args, Callable
+
+def _format_annotation(ann) -> str:
+    if ann is inspect._empty:
+        return "Any"
+
+    # Built-in types: str, int, float, bool
+    if isinstance(ann, type):
+        return ann.__name__
+
+    origin = get_origin(ann)
+    args = get_args(ann)
+
+    # List[T]
+    if origin is list:
+        return f"list[{_format_annotation(args[0])}]"
+
+    # Dict[K, V]
+    if origin is dict:
+        return f"dict[{_format_annotation(args[0])}, {_format_annotation(args[1])}]"
+
+    # Tuple[T1, T2, ...]
+    if origin is tuple:
+        return f"tuple[{', '.join(_format_annotation(a) for a in args)}]"
+
+    # Union / Optional
+    if origin is Union:
+        return "|".join(_format_annotation(a) for a in args)
+
+    # Literal["a", "b"]
+    if origin is not None and origin.__name__ == "Literal":
+        return "|".join(str(a) for a in args)
+
+    # typing.Any
+    if ann is Any:
+        return "Any"
+
+    # fallback
+    return str(ann).replace("typing.", "").replace("<class '", "").replace("'>", "")
 
 
 class BaseTool(LoggerMixin):
@@ -142,6 +182,76 @@ class BaseTool(LoggerMixin):
         return all_grouped
     
     @classmethod
+    def get_tools_grouped_str_by_callables(
+        cls,
+        tools: list[Callable],
+        agent_name: str,
+        *,
+        strict: bool = False
+    ) -> str:
+        """
+        Trả về danh sách tool theo group (category)
+        nhưng CHỈ lấy các tool trong list Callable.
+
+        Params:
+            tools (list[Callable]): danh sách function tool
+            strict (bool):
+                - True  -> raise error nếu tool không tồn tại trong registry
+                - False -> silently skip tool không hợp lệ
+
+        Format output giống get_all_tools_grouped_str()
+        """
+
+        groups: dict[str, list[str]] = {}
+
+        for func in tools:
+            if not callable(func):
+                if strict:
+                    raise TypeError(f"Invalid tool (not callable): {func}")
+                continue
+
+            tool_name = func.__name__
+
+            # ---- validate registry ----
+            if tool_name not in cls.registry or tool_name not in cls.metadata:
+                if strict:
+                    raise ValueError(f"Tool '{tool_name}' not found in BaseTool registry")
+                continue
+
+            meta = cls.metadata[tool_name]
+            category = meta.get("category", "general")
+
+            # ---- lấy signature ----
+            sig = inspect.signature(func)
+
+            params = []
+            for p in sig.parameters.values():
+                annotation = (
+                    "Any"
+                    if p.annotation == inspect._empty
+                    else str(p.annotation).replace("typing.", "")
+                )
+                params.append(f"{p.name}: {annotation}")
+
+            param_str = ", ".join(params)
+
+            desc = meta.get("description", "").strip()
+            tool_line = f"- {tool_name}({param_str}) -> {desc}"
+
+            groups.setdefault(category, []).append(tool_line)
+
+        # ---- format output ----
+        output_lines: list[str] = []
+        for group, tools in groups.items():
+            output_lines.append(f"[{agent_name}]")
+            output_lines.extend(tools)
+            output_lines.append("")
+
+        return "\n".join(output_lines).strip()
+
+
+    
+    @classmethod
     def get_all_tools_grouped_str(cls) -> str:
         """
         Trả về danh sách tool theo group (category)
@@ -162,11 +272,7 @@ class BaseTool(LoggerMixin):
 
             params = []
             for p in sig.parameters.values():
-                annotation = (
-                    "Any"
-                    if p.annotation == inspect._empty
-                    else str(p.annotation).replace("typing.", "")
-                )
+                annotation = _format_annotation(p.annotation)
                 params.append(f"{p.name}: {annotation}")
 
             param_str = ", ".join(params)
@@ -189,7 +295,7 @@ class BaseTool(LoggerMixin):
 
 
     @classmethod
-    def auto_discover(cls, package_name="src.tools"):
+    def auto_discover(cls, package_name="src.tools.group"):
         """
         Quét package và tự động import module chứa tool.
         Điều này kích hoạt decorator và registry sẽ tự đầy.
