@@ -15,7 +15,20 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # CREATE FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Tạo file mới và ghi nội dung.
+        Returns:
+            dict:
+                success (bool): True nếu tạo thành công.
+                error (str|None): Lỗi xảy ra (nếu có).
+                meta (dict):
+                    action (str): "create_file".
+                    filename (str): Tên file sau khi xử lý extension.
+                    path (str|None): Đường dẫn tuyệt đối của file.
+                    message (str): Mô tả kết quả.
+        """
+    )
     @staticmethod
     def create_file(
         filename: str,
@@ -69,7 +82,20 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # EDIT FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Ghi đè hoặc nối thêm nội dung vào file.
+        Returns:
+            dict:
+                success (bool): True nếu chỉnh sửa thành công.
+                error (str|None): Lỗi nếu có.
+                meta:
+                    action (str): "edit_file".
+                    filename (str)
+                    path (str|None)
+                    mode (str)
+                    message (str)
+        """)
     @staticmethod
     def edit_file(
         filename: str,
@@ -126,7 +152,15 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # DELETE FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Xóa file nếu tồn tại.
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                meta {action, filename, path, message}
+        """)
     @staticmethod
     def delete_file(filename: str) -> dict:
         """
@@ -173,7 +207,16 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # READ FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Đọc nội dung file dạng text.
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                content (str|None): Nội dung file.
+                meta {action, filename, path, message}
+        """)
     @staticmethod
     def read_file(filename: str) -> dict:
         """
@@ -224,7 +267,14 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # RENAME FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Đổi tên file hoặc di chuyển file.
+        Returns:
+            dict:
+                success, error,
+                meta {action, old_filename, new_filename, path, message}
+        """)
     @staticmethod
     def rename_file(old_name: str, new_name: str) -> dict:
         """
@@ -276,7 +326,14 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # COPY FILE
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Sao chép file từ src sang dest.
+        Returns:
+            dict:
+                success, error,
+                meta {action, source_filename, destination_filename, path, message}
+        """)
     @staticmethod
     def copy_file(src: str, dest: str) -> dict:
         """
@@ -328,7 +385,15 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # FILE INFO
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Lấy thông tin file.
+        Returns:
+            dict:
+                success, error,
+                info {size, created, modified} | None
+                meta {action, filename, path, message}
+        """)
     @staticmethod
     def file_info(filename: str) -> dict:
         """
@@ -383,7 +448,16 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # CHECK EXISTS
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Kiểm tra file có tồn tại.
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                exists (bool): True nếu file tồn tại.
+                meta {action, filename, path, message}
+        """)
     @staticmethod
     def check_file_exists(filename: str) -> dict:
         """
@@ -421,7 +495,18 @@ class CRUDFile(BaseTool):
     # ===========================================================
     # IDENTIFY FILE NAME
     # ===========================================================
-    @BaseTool.register_tool(category="file")
+    @BaseTool.register_tool(category="file", description=
+        """
+        Chuẩn hóa tên file (auto thêm .txt).
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                info:
+                    final_filename (str)
+                    extension (str)
+                meta {action, filename, final_filename, extension, message}
+        """)
     @staticmethod
     def identify_target_file(filename: str) -> dict:
         """

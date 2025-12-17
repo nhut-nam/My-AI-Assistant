@@ -18,9 +18,16 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # ADD
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Cộng hai số a và b."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Add two numbers.
+        Returns:
+            dict:
+                success (bool): True if calculation succeeds.
+                error (str|None): Error message if failed.
+                result (float): a + b.
+                meta (dict): Calculation metadata.
+        """
     )
     @staticmethod
     def add(a: float, b: float) -> dict:
@@ -57,9 +64,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # SUBTRACT
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Trừ hai số a và b."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Subtract two numbers.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                result (float): a - b.
+                meta (dict)
+        """
     )
     @staticmethod
     def subtract(a: float, b: float) -> dict:
@@ -92,9 +107,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # MULTIPLY
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Nhân hai số a và b."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Multiply two numbers.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                result (float): a * b.
+                meta (dict)
+        """
     )
     @staticmethod
     def multiply(a: float, b: float) -> dict:
@@ -127,9 +150,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # DIVIDE
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Chia hai số a và b (không chia cho 0)."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Divide a by b.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None): Division by zero error if b == 0.
+                result (float|None): a / b.
+                meta (dict)
+        """
     )
     @staticmethod
     def divide(a: float, b: float) -> dict:
@@ -170,9 +201,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # SQUARE
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Tính bình phương của một số."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Compute square of a number.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                result (float): n squared.
+                meta (dict)
+        """
     )
     @staticmethod
     def square(n: float) -> dict:
@@ -203,9 +242,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # SQUARE ROOT
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Tính căn bậc hai (không áp dụng cho số âm)."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Compute square root of a number.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None): Error if n < 0.
+                result (float|None): sqrt(n).
+                meta (dict)
+        """
     )
     @staticmethod
     def square_root(n: float) -> dict:
@@ -243,9 +290,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # RECTANGLE AREA
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Tính diện tích hình chữ nhật (dài * rộng)."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Calculate rectangle area.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                result (float): width * height.
+                meta (dict)
+        """
     )
     @staticmethod
     def rectangle_area(width: float, height: float) -> dict:
@@ -278,9 +333,17 @@ class SimpleMathTool(BaseTool):
     # ===========================================================
     # CIRCLE AREA
     # ===========================================================
-    @BaseTool.register_tool(
-        category="math",
-        description="Tính diện tích hình tròn: π * r^2."
+    @BaseTool.register_tool(category="math", description=
+        """
+        Calculate circle area.
+
+        Returns:
+            dict:
+                success (bool)
+                error (str|None)
+                result (float): π * r².
+                meta (dict)
+        """
     )
     @staticmethod
     def circle_area(radius: float) -> dict:
