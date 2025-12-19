@@ -4,6 +4,30 @@ import time
 from typing_extensions import Literal, Any
 from src.tools.base_tool import BaseTool
 
+class SandboxFS:
+    def __init__(self, root: str):
+        self.root = os.path.realpath(os.path.abspath(root))
+        os.makedirs(self.root, exist_ok=True)
+
+    def resolve(self, path: str) -> str:
+        """
+        Resolve user path into sandbox.
+        - Reject absolute path
+        - Reject ../ escape
+        - Reject symlink escape
+        """
+        if os.path.isabs(path):
+            raise PermissionError("Absolute path is not allowed")
+
+        joined = os.path.join(self.root, path)
+        real = os.path.realpath(joined)
+
+        if not real.startswith(self.root):
+            raise PermissionError("Sandbox escape attempt")
+
+        return real
+    
+SANDBOX = SandboxFS("F:/agent_workspace")
 
 class CRUDFile(BaseTool):
     """
@@ -36,22 +60,17 @@ class CRUDFile(BaseTool):
         type_file: Literal[".txt", ".py"] = ".txt",
         directory: str | None = None,
     ) -> dict:
-        """
-        Tạo file mới và ghi nội dung.
-        """
         content = str(content)
         try:
             if not filename.endswith(type_file):
                 filename += type_file
 
-            abs_path = (
-                os.path.join(os.path.abspath(directory), filename)
-                if directory
-                else os.path.abspath(filename)
+            relative_path = (
+                os.path.join(directory, filename) if directory else filename
             )
 
-            if directory:
-                os.makedirs(os.path.abspath(directory), exist_ok=True)
+            abs_path = SANDBOX.resolve(relative_path)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
 
             with open(abs_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -63,7 +82,7 @@ class CRUDFile(BaseTool):
                     "action": "create_file",
                     "filename": filename,
                     "path": abs_path,
-                    "message": "File created successfully",
+                    "message": "File created inside sandbox",
                 },
             }
 
@@ -102,12 +121,10 @@ class CRUDFile(BaseTool):
         new_content: Any,
         mode: Literal["overwrite", "append"] = "overwrite",
     ) -> dict:
-        """
-        Ghi đè hoặc nối thêm nội dung vào file.
-        """
         new_content = str(new_content)
         try:
-            abs_path = os.path.abspath(filename)
+            abs_path = SANDBOX.resolve(filename)
+
             if not os.path.exists(abs_path):
                 return {
                     "success": False,
@@ -136,6 +153,7 @@ class CRUDFile(BaseTool):
                     "message": f"File updated successfully ({mode})",
                 },
             }
+
         except Exception as e:
             return {
                 "success": False,
@@ -163,11 +181,9 @@ class CRUDFile(BaseTool):
         """)
     @staticmethod
     def delete_file(filename: str) -> dict:
-        """
-        Xóa file nếu tồn tại.
-        """
         try:
-            abs_path = os.path.abspath(filename)
+            abs_path = SANDBOX.resolve(filename)
+
             if not os.path.exists(abs_path):
                 return {
                     "success": False,
@@ -189,9 +205,10 @@ class CRUDFile(BaseTool):
                     "action": "delete_file",
                     "filename": filename,
                     "path": abs_path,
-                    "message": "File deleted successfully",
+                    "message": "File deleted inside sandbox",
                 },
             }
+
         except Exception as e:
             return {
                 "success": False,
@@ -203,27 +220,22 @@ class CRUDFile(BaseTool):
                     "message": "Failed to delete file",
                 },
             }
-
-    # ===========================================================
-    # READ FILE
-    # ===========================================================
+            
     @BaseTool.register_tool(category="file", description=
         """
-        Đọc nội dung file dạng text.
+        Đọc file nếu tồn tại.
         Returns:
             dict:
                 success (bool)
                 error (str|None)
-                content (str|None): Nội dung file.
+                content: (str|None)
                 meta {action, filename, path, message}
         """)
     @staticmethod
     def read_file(filename: str) -> dict:
-        """
-        Đọc nội dung file dạng text.
-        """
         try:
-            abs_path = os.path.abspath(filename)
+            abs_path = SANDBOX.resolve(filename)
+
             if not os.path.exists(abs_path):
                 return {
                     "success": False,
@@ -248,9 +260,10 @@ class CRUDFile(BaseTool):
                     "action": "read_file",
                     "filename": filename,
                     "path": abs_path,
-                    "message": "File read successfully",
+                    "message": "File read inside sandbox",
                 },
             }
+
         except Exception as e:
             return {
                 "success": False,
@@ -263,6 +276,7 @@ class CRUDFile(BaseTool):
                     "message": "Failed to read file",
                 },
             }
+
 
     # ===========================================================
     # RENAME FILE
@@ -277,12 +291,9 @@ class CRUDFile(BaseTool):
         """)
     @staticmethod
     def rename_file(old_name: str, new_name: str) -> dict:
-        """
-        Đổi tên file hoặc di chuyển file.
-        """
         try:
-            abs_old = os.path.abspath(old_name)
-            abs_new = os.path.abspath(new_name)
+            abs_old = SANDBOX.resolve(old_name)
+            abs_new = SANDBOX.resolve(new_name)
 
             if not os.path.exists(abs_old):
                 return {
@@ -297,6 +308,7 @@ class CRUDFile(BaseTool):
                     },
                 }
 
+            os.makedirs(os.path.dirname(abs_new), exist_ok=True)
             os.rename(abs_old, abs_new)
 
             return {
@@ -307,9 +319,10 @@ class CRUDFile(BaseTool):
                     "old_filename": old_name,
                     "new_filename": new_name,
                     "path": abs_new,
-                    "message": "File renamed successfully",
+                    "message": "File renamed inside sandbox",
                 },
             }
+
         except Exception as e:
             return {
                 "success": False,
@@ -336,12 +349,9 @@ class CRUDFile(BaseTool):
         """)
     @staticmethod
     def copy_file(src: str, dest: str) -> dict:
-        """
-        Sao chép file từ src sang dest.
-        """
         try:
-            abs_src = os.path.abspath(src)
-            abs_dest = os.path.abspath(dest)
+            abs_src = SANDBOX.resolve(src)
+            abs_dest = SANDBOX.resolve(dest)
 
             if not os.path.exists(abs_src):
                 return {
@@ -356,6 +366,7 @@ class CRUDFile(BaseTool):
                     },
                 }
 
+            os.makedirs(os.path.dirname(abs_dest), exist_ok=True)
             shutil.copy2(abs_src, abs_dest)
 
             return {
@@ -366,9 +377,10 @@ class CRUDFile(BaseTool):
                     "source_filename": src,
                     "destination_filename": dest,
                     "path": abs_dest,
-                    "message": "File copied successfully",
+                    "message": "File copied inside sandbox",
                 },
             }
+
         except Exception as e:
             return {
                 "success": False,
@@ -396,11 +408,9 @@ class CRUDFile(BaseTool):
         """)
     @staticmethod
     def file_info(filename: str) -> dict:
-        """
-        Lấy thông tin file.
-        """
         try:
-            abs_path = os.path.abspath(filename)
+            abs_path = SANDBOX.resolve(filename)
+
             if not os.path.exists(abs_path):
                 return {
                     "success": False,
@@ -428,7 +438,7 @@ class CRUDFile(BaseTool):
                     "action": "file_info",
                     "filename": filename,
                     "path": abs_path,
-                    "message": "File info retrieved successfully",
+                    "message": "File info retrieved inside sandbox",
                 },
             }
 
@@ -464,7 +474,7 @@ class CRUDFile(BaseTool):
         Kiểm tra file có tồn tại.
         """
         try:
-            abs_path = os.path.abspath(filename)
+            abs_path = SANDBOX.resolve(filename)
             exists = os.path.exists(abs_path)
 
             return {
