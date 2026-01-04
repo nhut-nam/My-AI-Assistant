@@ -1,0 +1,34 @@
+version: 1
+
+pre_planner_guard:
+  - "hack"
+  - "exploit"
+  - "bypass"
+  - "backdoor"
+  - "payload"
+  - "root access"
+  - "crack"
+  - "steal"
+  - "dump database"
+  - "password"
+  - "credentials"
+  - "token theft"
+  - "phishing"
+  - "scam"
+  - "fraud"
+ 
+executor:
+  dangerous_tools:
+    require_hitl:
+      - "delete_file"
+      - "rename_file"
+      - "copy_file"
+
+prompt_injection:
+  block:
+    - "ignore previous instructions"
+    - "disregard system prompt"
+    - "you are not an ai"
+    - "act as"
+    - "developer mode"
+    - "jailbreak"

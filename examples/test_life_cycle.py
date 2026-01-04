@@ -4,7 +4,7 @@ from src.lifecycle.life_cycle import LifeCycle
 async def main():
     life_cycle = LifeCycle()
     result = await life_cycle.run(
-        user_request="Lấy kết quả từ file F:/result.txt so sánh có bằng số 67 nếu bằng thì hãy tạo ra file mới F:/troll_2.txt với nội dung 'sybau'."
+        user_request="tạo giúp tôi file test_67 tại ổ F với đuôi file txt"
     )
     print(result)
 

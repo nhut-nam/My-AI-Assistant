@@ -51,6 +51,7 @@ def validate_sop(sop: dict, available_agents: dict) -> tuple[bool, str]:
 
     steps = sop["steps"]
     step_numbers = {step.get("step_number") for step in steps}
+    step_numbers.add(-1)
 
     # -------------------------------------------------------
     # Validate unique store_result_as
@@ -126,36 +127,55 @@ def validate_sop(sop: dict, available_agents: dict) -> tuple[bool, str]:
 
         for key, val in params.items():
 
-            if isinstance(val, str):
-                if val.startswith("step["):
-                    return False, f"invalid param syntax '{val}' in step {idx}"
+            if not isinstance(val, str):
+                continue
 
-                # variable reference format
-                m = re.match(r"^<([a-zA-Z_][a-zA-Z0-9_]*)>(?:\..+)?$", val)
-                if m:
-                    var = m.group(1)
-                    if var not in used_vars:
-                        return False, f"Unknown store_result_as '{var}' referenced in step {idx}"
+            # cấm syntax cũ step[x]
+            if val.startswith("step["):
+                return False, f"invalid param syntax '{val}' in step {idx}"
 
-        # ---------------------------------------------------
-        # CONDITIONS VALIDATION
-        # ---------------------------------------------------
-        for cond in step["conditions"]:
-            cond_step = cond.get("step")
-            if cond_step not in step_numbers:
-                return False, f"Condition refers to non-existent step '{cond_step}' in step {idx}"
+            # match <var> or <var>.field
+            m = re.match(
+                r"^<([a-zA-Z_][a-zA-Z0-9_]*)(?:\.([a-zA-Z_][a-zA-Z0-9_]*))?>$",
+                val
+            )
+            if m:
+                var = m.group(1)
+                field = m.group(2)
 
-            # Cannot reference future steps
-            if cond_step >= step["step_number"]:
-                return False, f"Condition cannot reference future step {cond_step} in step {idx}"
+                if var not in used_vars:
+                    return False, (
+                        f"Unknown store_result_as '{var}' referenced in step {idx}"
+                    )
 
-            # Validate jump targets
-            js = cond.get("jump_to_step_on_success")
-            jf = cond.get("jump_to_step_on_failure")
+                # 🚨 CHẶN TRUY CẬP SÂU HƠN 1 CẤP
+                if "." in val.strip("<>"):
+                    parts = val.strip("<>").split(".")
+                    if len(parts) > 2:
+                        return False, (
+                            f"Invalid nested reference '{val}' in step {idx}. "
+                            f"Only '<var>' or '<var>.field' is allowed."
+                        )
 
-            for target, label in [(js, "jump_to_step_on_success"), (jf, "jump_to_step_on_failure")]:
-                if target is not None and target not in step_numbers:
-                    return False, f"{label}={target} in step {idx} is not a valid step"
+                # ---------------------------------------------------
+                # CONDITIONS VALIDATION
+                # ---------------------------------------------------
+                for cond in step["conditions"]:
+                    cond_step = cond.get("step")
+                    if cond_step not in step_numbers:
+                        return False, f"Condition refers to non-existent step '{cond_step}' in step {idx}"
+
+                    # Cannot reference future steps
+                    if cond_step >= step["step_number"]:
+                        return False, f"Condition cannot reference future step {cond_step} in step {idx}"
+
+                    # Validate jump targets
+                    js = cond.get("jump_to_step_on_success")
+                    jf = cond.get("jump_to_step_on_failure")
+
+                    for target, label in [(js, "jump_to_step_on_success"), (jf, "jump_to_step_on_failure")]:
+                        if target is not None and target not in step_numbers:
+                            return False, f"{label}={target} in step {idx} is not a valid step"
 
         # ---------------------------------------------------
         # condition_to_jump_step VALIDATION

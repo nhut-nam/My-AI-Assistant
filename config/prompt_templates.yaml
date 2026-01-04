@@ -128,6 +128,7 @@ sop_prompt: |
     - final_target: str
       This is your response and steps's result combined.
       response from store_result_as of all needed steps, it can be store more than one step's result combined.
+      DO NOT set NULL 
 
   params MUST be {{}}
   conditions MUST be []

@@ -15,7 +15,6 @@ class PlannerAgent(BaseAgent):
     def __init__(self, llm, tools=None, name=None, description="", log_dir="logs"):
         super().__init__(llm, tools, name, description, log_dir)
         self.planner_prompt = PLANNER_PROMPT
-        self.critic_agent = PlanCriticAgent(llm=llm)
 
     # ------------------------------------------------------------
     # BUILD PROMPT — thêm biến {error_message} & {attempt}
@@ -87,4 +86,4 @@ class PlannerAgent(BaseAgent):
         # 5) FAIL SAU NHIỀU LẦN THỬ
         # --------------------------------------------------------
         self.error(f"[PlannerAgent] Failed after {self.MAX_RETRY} attempts.")
-        return last_error_message
+        return {'success': False, 'message': last_error_message}

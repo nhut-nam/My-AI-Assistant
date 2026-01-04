@@ -1,8 +1,23 @@
 from pydantic import BaseModel, Field, field_validator
+from dataclasses import dataclass, field
+import uuid
 from typing import Union
 import operator
 from typing import Annotated, List, Tuple, Dict, Literal, Optional, Any
 from typing_extensions import TypedDict
+from enum import Enum
+
+class ExecutionState(str, Enum):
+    DONE = "done"
+    PENDING_HITL = "pending_hitl"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    
+class ConversationStatus(str, Enum):
+    RUNNING = "RUNNING"
+    WAITING_HITL = "WAITING_HITL"
+    DONE = "DONE"
+    FAILED = "FAILED"
 
 class Response(BaseModel):
     """Response to user."""
@@ -150,7 +165,6 @@ class SOPStep(BaseModel):
         description="Các điều kiện step trước để step hiện tại được phép chạy. Dạng: [Condition.step == value, ...]"
     )
 
-
     # condition: List[Condition] = Field(
     #     None, description="Các điều kiện để  chạy hoặc bỏ qua step."
     # )
@@ -205,12 +219,50 @@ class SynthesizedCriticReport(BaseModel):
     key_failures: list[str] = Field(..., description="Các lỗi quan trọng rút ra từ execution + SOP result.")
     improvement_advice: list[str] = Field(..., description="Gợi ý cải thiện SOP hoặc Planner.")
     risk_level: str = Field(..., description="Đánh giá rủi ro tổng thể: low | medium | high | critical")
+    
+class HITLRequired(Exception):
+    def __init__(self, tool_name, params, reason=None):
+        self.tool_name = tool_name
+        self.params = params
+        self.reason = reason
+        
+@dataclass
+class ExecutionStatus:
+    state: ExecutionState
 
+    result: Optional[Any] = None
+
+    tool_name: Optional[str] = None
+    params: Optional[dict] = None
+    reason: Optional[str] = None
+    current_step_idx: Optional[int] = None
+
+    error: Optional[str] = None
+    steps: Optional[list] = None
+    context: Optional[dict] = None
+    
 class StateSchema(BaseModel):
     user_request: str
     plan: Optional[Plan] = None
     critic: Dict[str, Any] = Field(default_factory=dict)
     sop: Optional[SOP] = None
-    exec_result: Dict[str, Any] = Field(default_factory=dict)
+    exec_result: ExecutionStatus = None
     retry: int = 3
+    
+    is_resume: bool = False
+    hitl_decision: Optional[Literal["approve", "reject"]] = None
 
+
+@dataclass
+class Message:
+    role: Literal["user", "agent", "system"]
+    content: str
+
+@dataclass
+class ConversationSegment:
+    segment_id: str         
+    intent: str = ""
+    status: ConversationStatus = ConversationStatus.RUNNING
+    messages: List[Message] = field(default_factory=list)
+
+    pending_state: Optional[StateSchema] = None

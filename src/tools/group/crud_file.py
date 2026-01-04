@@ -15,7 +15,7 @@ class SandboxFS:
         - Reject absolute path
         - Reject ../ escape
         - Reject symlink escape
-        """
+        """ 
         if os.path.isabs(path):
             raise PermissionError("Absolute path is not allowed")
 

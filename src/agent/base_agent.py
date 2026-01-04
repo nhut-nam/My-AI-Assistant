@@ -9,6 +9,7 @@ from src.models.models import Response
 from langchain.agents import create_agent
 from src.handler.error_handler import ErrorHandler
 import json
+from src.middleware.agent_middleware import AgentMiddleware
 
 class BaseAgent(LoggerMixin, ABC):
     """
@@ -32,6 +33,7 @@ class BaseAgent(LoggerMixin, ABC):
         self._tools: List[Callable] = []
         self.agent = self._create_agent()
         self.description = description
+        self.middleware = List[AgentMiddleware]
         self.error_handler = ErrorHandler()
 
         if tools:
@@ -138,3 +140,6 @@ class BaseAgent(LoggerMixin, ABC):
 
     def to_string(self):
         return str(self)
+    
+    def set_middleware(self, middleware: AgentMiddleware):
+        self.middleware.append(middleware)
