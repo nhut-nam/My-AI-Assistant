@@ -48,19 +48,6 @@ User Request
 ### ExecutorAgent
 - Execute SOP deterministically  
 
-I can help you fix the README.md. I notice several markdown formatting issues:
-
-1. **Missing closing backtick** after "Clone repository" section
-2. **Inconsistent heading levels** (### vs ##)
-3. **Missing code fence** before "Configure environment variables"
-4. **Mixed languages** (English + Vietnamese at the end)
-5. **Incomplete License section**
-
-For the `$SELECTION_PLACEHOLDER$`, based on context, it should be:
-```
-modes (static/dynamic execution paths)
-```
-
 Would you like me to provide:
 - A corrected full README with proper markdown syntax?
 - English-only version (removing Vietnamese section)?
