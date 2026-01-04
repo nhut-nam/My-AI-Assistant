@@ -48,15 +48,6 @@ User Request
 ### ExecutorAgent
 - Execute SOP deterministically  
 
-Would you like me to provide:
-- A corrected full README with proper markdown syntax?
-- English-only version (removing Vietnamese section)?
-- Fixed placeholder text only?
-
-- Resolve parameters from context  
-- Apply retry, conditions, and step jumps  
-- Maintain execution state and results  
-
 ### Tool System
 - Auto-discover tools via decorators  
 - Register tools with metadata  
