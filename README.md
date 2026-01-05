@@ -90,15 +90,20 @@ pip install -e .
 
 ## Configure environment variables
 
-# Create a .env file or export variables manually:
+Create a `.env` file or export variables manually:
 
 ```bash
 GROQ_API_KEY=your_groq_api_key
 OLLAMA_MODEL=llama3.1
 ```
 
-### Usage Example
-```bash
+---
+
+## Usage Examples
+
+### Basic Usage
+
+```python
 from src.lifecycle.life_cycle import LifeCycle
 from src.models.models import StateSchema
 import asyncio
@@ -114,34 +119,131 @@ async def main():
 asyncio.run(main())
 ```
 
+### Using Chat UI
 
-### Design Rules
+```bash
+python chat_ui.py
+```
 
-Let LLMs plan, not execute
+Opens a GUI window for interactive conversations with the AI assistant.
 
-Validate before acting
+---
 
-Prefer deterministic execution over probabilistic reasoning
+## Logging System
 
-Keep state explicit and traceable
+### Overview
 
-Isolate responsibilities between agents
+The project includes a comprehensive **structured logging system** that tracks all operations with JSON-formatted logs. All logs are automatically tagged with `segment_id` for conversation tracking.
 
-Treat safety as a first-class concern
+### Features
 
-Intended Use Cases
+- **Structured JSON Logs**: All logs are in JSON format for easy parsing and analysis
+- **Component-based Logging**: Each component (agents, executor, lifecycle) logs to separate files
+- **Rich Metadata**: Logs include step numbers, tool names, severity levels, errors, and more
+- **Conversation Tracking**: All logs are tagged with `segment_id` to track conversation segments
+- **Rotating Log Files**: Automatic log rotation (5MB per file, 3 backups)
 
-Agentic workflow orchestration
+### Log Format
 
-Tool-based automation systems
+Each log entry follows this structure:
 
-Planner–Executor architecture research
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000000",
+  "level": "INFO",
+  "event": "tool_execution_success",
+  "component": "ExecutorAgent",
+  "segment_id": "seg-abc12345",
+  "step": 3,
+  "tool": "create_file",
+  "severity": "RECOVERABLE"
+}
+```
 
-Safe execution of LLM-generated plans
+### Log Viewer Web Interface
 
-Educational reference for Agentic AI systems
+A FastAPI-based web interface for viewing and filtering logs in real-time.
 
-License
+#### Installation
+
+```bash
+# Install web dependencies
+pip install fastapi uvicorn[standard]
+```
+
+#### Running Log Viewer
+
+```bash
+# Option 1: Use the helper script
+python run_log_viewer.py
+
+# Option 2: Use uvicorn directly
+uvicorn src.web.log_viewer:app --reload
+```
+
+Then open your browser at: **http://localhost:8000**
+
+#### Features
+
+- **Table View**: Logs displayed in a searchable table format
+- **Real-time Filtering**: Filter by component, level, event, or segment_id
+- **Statistics Dashboard**: View log counts, component distribution, and top events
+- **Auto-refresh**: Automatically updates every 5 seconds
+- **Color-coded Levels**: Visual distinction for INFO, WARNING, ERROR, DEBUG
+
+#### API Endpoints
+
+- `GET /api/logs` - Get logs with filters (component, level, event, segment_id)
+- `GET /api/stats` - Get log statistics
+- `GET /api/files` - List all log files
+- `GET /api/file/{filename}` - Get logs from a specific file
+
+#### Example: Filter logs by segment_id
+
+```bash
+curl "http://localhost:8000/api/logs?segment_id=seg-abc12345"
+```
+
+### Log Files Location
+
+All logs are stored in the `logs/` directory:
+
+```
+logs/
+├── LifeCycle.log
+├── ExecutorAgent.log
+├── PlannerAgent.log
+├── SOPAgent.log
+├── PlanCriticAgent.log
+└── ...
+```
+
+---
+
+## Design Rules
+
+- **Let LLMs plan, not execute** - Separation of planning and execution
+- **Validate before acting** - All plans and SOPs are validated before execution
+- **Prefer deterministic execution** - Over probabilistic reasoning
+- **Keep state explicit and traceable** - Full state management with logging
+- **Isolate responsibilities** - Clear separation between agents
+- **Treat safety as a first-class concern** - HITL middleware for sensitive operations
+
+---
+
+## Intended Use Cases
+
+- Agentic workflow orchestration
+- Tool-based automation systems
+- Planner–Executor architecture research
+- Safe execution of LLM-generated plans
+- Educational reference for Agentic AI systems
+
+---
+
+## License
+
+[Add your license here]
 
 ---
 
