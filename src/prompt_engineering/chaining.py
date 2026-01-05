@@ -50,11 +50,12 @@ class GradChaining:
             seg.messages.append(Message("user", hitl_decision))
             seg.pending_state.hitl_decision = hitl_decision
             seg.pending_state.is_resume = True
+            seg.pending_state.segment_id = segment_id  # Ensure segment_id is set
             final_state = await self.life_cycle.run(seg.pending_state)
             seg.pending_state = None
 
         elif user_request is not None:
-            state = StateSchema(user_request=user_request)
+            state = StateSchema(user_request=user_request, segment_id=segment_id)
             final_state = await self.life_cycle.run(state)
 
         else:

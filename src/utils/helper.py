@@ -1,10 +1,7 @@
 import yaml
 from typing import Any
-from dotenv import load_dotenv
 import os
 import re
-
-load_dotenv() 
 
 def load_yaml(path: str) -> Any:
     """

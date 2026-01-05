@@ -251,6 +251,7 @@ class StateSchema(BaseModel):
     
     is_resume: bool = False
     hitl_decision: Optional[Literal["approve", "reject"]] = None
+    segment_id: Optional[str] = None  # Conversation segment ID for tracking
 
 
 @dataclass

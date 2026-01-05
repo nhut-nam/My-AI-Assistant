@@ -19,11 +19,12 @@ class LifeCycle(LoggerMixin):
 
     def __init__(self):
         super().__init__("LifeCycle")
-        self.info("[LifeCycle] Initializing...")
+        self.info("lifecycle_initializing")
 
         self.llm = GroqClient()
         self.llm_ollama = OllamaClient()
 
+        # Agents sẽ được khởi tạo lại với segment_id khi cần
         self.planner = PlannerAgent(llm=self.llm)
         self.critic = PlanCriticAgent(llm=self.llm)
         self.sop_agent = SOPAgent(llm=self.llm)
@@ -61,21 +62,23 @@ class LifeCycle(LoggerMixin):
         graph = StateGraph(state_schema=StateSchema)
         
         def route_from_start(state: StateSchema):
-            self.debug(f"[Router] START is_resume={state.is_resume}")
+            self.debug("router_start", is_resume=state.is_resume)
             if state.is_resume:
-                self.info("[Router] Resume detected → executor")
+                self.info("router_resume_detected", route="executor")
                 return "executor"
-            self.info("[Router] Fresh run → planner")
+            self.info("router_fresh_run", route="planner")
             return "planner"
 
 
 
         async def planner_node(state: StateSchema):
-            self.info("[PlannerNode] Enter")
+            self.info("planner_node_enter")
 
             if state.critic:
                 self.warning(
-                    f"[PlannerNode] Re-planning due to critic. retry={state.retry + 1}"
+                    "planner_replanning",
+                    retry=state.retry + 1,
+                    error_message=state.critic.get("error_message", "")
                 )
                 plan = await self.planner.invoke(
                     state.user_request,
@@ -83,17 +86,17 @@ class LifeCycle(LoggerMixin):
                     attempt=state.retry + 1
                 )
             else:
-                self.debug("[PlannerNode] First planning attempt")
+                self.debug("planner_first_attempt")
                 plan = await self.planner.invoke(state.user_request)
 
             state.plan = plan
-            self.info("[PlannerNode] Plan generated")
-            self.debug(f"[PlannerNode] Plan steps={len(plan.steps)}")
+            self.info("planner_plan_generated", steps_count=len(plan.steps))
+            self.debug("planner_plan_details", steps=plan.steps)
             return state
 
 
         async def critic_node(state: StateSchema):
-            self.info("[CriticNode] Evaluating plan")
+            self.info("critic_node_evaluating")
 
             critic_resp = await self.critic.invoke(
                 plan=state.plan,
@@ -104,10 +107,10 @@ class LifeCycle(LoggerMixin):
             critic = critic_obj.model_dump() if critic_obj else {}
 
             score = critic.get("score", 0)
-            self.info(f"[CriticNode] Score={score}")
+            self.info("critic_score", score=score)
 
             if score < 100:
-                self.warning("[CriticNode] Plan rejected")
+                self.warning("critic_plan_rejected", score=score)
 
             state.critic = critic
             return state
@@ -118,36 +121,39 @@ class LifeCycle(LoggerMixin):
             retry = state.retry
 
             self.debug(
-                f"[RoutePlanning] score={score}, retry={retry}/{self.MAX_PLAN_RETRY}"
+                "route_planning",
+                score=score,
+                retry=retry,
+                max_retry=self.MAX_PLAN_RETRY
             )
 
             if score == 100:
-                self.info("[RoutePlanning] Plan accepted → SOP")
+                self.info("route_planning_accepted", route="sop_dispatch")
                 return "sop_dispatch"
 
             if retry + 1 >= self.MAX_PLAN_RETRY:
-                self.error("[RoutePlanning] Max retry exceeded → STOP")
+                self.error("route_planning_max_retry_exceeded", route="stop")
                 return "stop"
 
             state.retry += 1
-            self.warning("[RoutePlanning] Retry planner")
+            self.warning("route_planning_retry", route="planner")
             return "planner"
 
         async def sop_dispatch_node(state: StateSchema):
-            self.info("[SOPDispatch] Building SOP from plan")
+            self.info("sop_dispatch_building")
 
             sop = await self.dispatcher.build_sop(state.plan)
             state.sop = sop
 
-            self.info(f"[SOPDispatch] SOP built with {len(sop.steps)} steps")
+            self.info("sop_dispatch_built", steps_count=len(sop.steps))
             return state
 
 
         async def executor_node(state: StateSchema):
-            self.info("[ExecutorNode] Enter")
+            self.info("executor_node_enter")
 
             if state.is_resume:
-                self.info("[ExecutorNode] Resume execution")
+                self.info("executor_resume_execution")
 
                 result = await self.executor.run_sop(
                     state.sop,
@@ -159,7 +165,7 @@ class LifeCycle(LoggerMixin):
                 state.is_resume = False
                 return state
 
-            self.info("[ExecutorNode] Fresh execution")
+            self.info("executor_fresh_execution")
             result = await self.executor.run_sop(state.sop)
             state.exec_result = result
             return state
@@ -169,28 +175,32 @@ class LifeCycle(LoggerMixin):
             result = state.exec_result
 
             if not result:
-                self.debug("[RouteAfterExec] No result → END")
+                self.debug("route_after_executor_no_result", route="END")
                 return END
 
             if result.state == ExecutionState.PENDING_HITL:
                 if state.hitl_decision is not None:
-                    self.info("[RouteAfterExec] HITL decision received → resume")
+                    self.info("route_after_executor_hitl_decision", route="resume", decision=state.hitl_decision)
                     return "resume"
 
-                self.warning("[RouteAfterExec] Waiting for HITL decision")
+                self.warning("route_after_executor_waiting_hitl", route="END")
                 return END
 
-            self.info("[RouteAfterExec] Execution finished")
+            self.info("route_after_executor_finished", route="END", state=result.state.value)
             return END
 
         async def resume_node(state: StateSchema):
             decision = state.hitl_decision
             exec_result = state.exec_result
 
-            self.info(f"[ResumeNode] HITL decision={decision}")
+            self.info("resume_node_hitl_decision", decision=decision)
 
             if decision == "reject":
-                self.warning("[ResumeNode] HITL rejected → skip step")
+                self.warning(
+                    "resume_node_hitl_rejected",
+                    tool=exec_result.tool_name,
+                    step_number=exec_result.current_step_idx + 1
+                )
 
                 exec_result.context["hitl_skipped"] = {
                     "tool": exec_result.tool_name,
@@ -205,7 +215,11 @@ class LifeCycle(LoggerMixin):
                 return state
 
             if decision == "approve":
-                self.info("[ResumeNode] HITL approved")
+                self.info(
+                    "resume_node_hitl_approved",
+                    tool=exec_result.tool_name,
+                    step_number=exec_result.current_step_idx + 1
+                )
 
                 exec_result.context["hitl_approved"] = {
                     "tool": exec_result.tool_name,
@@ -264,6 +278,25 @@ class LifeCycle(LoggerMixin):
 
 
     async def run(self, state: StateSchema) -> StateSchema:
+        # Set segment_id cho tất cả components nếu có
+        segment_id = state.segment_id
+        if segment_id:
+            # Update execution_id cho các agents và executor
+            if hasattr(self.planner, 'execution_id'):
+                self.planner.execution_id = segment_id
+            if hasattr(self.critic, 'execution_id'):
+                self.critic.execution_id = segment_id
+            if hasattr(self.sop_agent, 'execution_id'):
+                self.sop_agent.execution_id = segment_id
+            if hasattr(self.executor, 'execution_id'):
+                self.executor.execution_id = segment_id
+            if hasattr(self.crud, 'execution_id'):
+                self.crud.execution_id = segment_id
+            if hasattr(self.math, 'execution_id'):
+                self.math.execution_id = segment_id
+            # Set cho LifeCycle itself
+            self.execution_id = segment_id
+        
         raw_state = await self.workflow.ainvoke(state)
         return StateSchema(**raw_state)
 

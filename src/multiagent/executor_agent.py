@@ -34,7 +34,7 @@ class ExecutorAgent(LoggerMixin):
         if not isinstance(agent, BaseAgent):
             raise ValueError("ExecutorAgent only accepts BaseAgent subclasses")
         self.agents[agent.__class__.__name__] = agent
-        self.info(f"[REGISTER] Loaded Agent: {agent.__class__.__name__}")
+        self.info("agent_registered", agent_name=agent.__class__.__name__)
 
     # ------------------------------------------------------------
     # PARAM RESOLVER
@@ -106,12 +106,23 @@ class ExecutorAgent(LoggerMixin):
 
         # 1) PRE-STEP CONDITIONS (SKIP LOGIC)
         if step.conditions and not self.check_conditions(step.conditions):
+            self.info(
+                "step_skipped",
+                step=step.step_number,
+                reason="conditions_not_met"
+            )
             resp = ToolResponse(success=True, output="SKIPPED", meta={"skipped": True})
             self.step_results[step.step_number] = resp
             return resp
 
         agent = self.agents.get(step.agent_type)
         if not agent:
+            self.error(
+                "agent_not_found",
+                step=step.step_number,
+                agent_type=step.agent_type,
+                severity="FATAL"
+            )
             resp = ToolResponse(success=False, error=f"Agent '{step.agent_type}' not registered")
             self.step_results[step.step_number] = resp
             return resp
@@ -125,6 +136,13 @@ class ExecutorAgent(LoggerMixin):
             tool_fn = agent.get_tool(tool)
 
             if not tool_fn:
+                self.error(
+                    "tool_not_found",
+                    step=step.step_number,
+                    tool=tool,
+                    agent_type=step.agent_type,
+                    severity="FATAL"
+                )
                 resp = ToolResponse(success=False, error=f"Tool '{tool}' not found")
                 self.step_results[step.step_number] = resp
                 return resp
@@ -138,17 +156,42 @@ class ExecutorAgent(LoggerMixin):
             )
             
             last_exc = None
-            for _ in range((step.retry or 0) + 1):
+            for attempt in range((step.retry or 0) + 1):
                 try:
                     out = tool_fn(**params)
                     resp = ToolResponse(success=True, output=out)
+                    self.info(
+                        "tool_execution_success",
+                        step=step.step_number,
+                        tool=tool,
+                        attempt=attempt + 1
+                    )
                     break
                 except Exception as e:
                     err = self.error_handler.handle_exception(e, "ExecutorAgent.execute_step")
                     last_exc = err
+                    severity_str = err.severity.value if hasattr(err.severity, 'value') else str(err.severity)
+                    
                     if err.severity != ErrorSeverity.RECOVERABLE:
+                        self.error(
+                            "tool_execution_failed",
+                            step=step.step_number,
+                            tool=tool,
+                            severity=severity_str,
+                            error=err.message,
+                            attempt=attempt + 1
+                        )
                         resp = ToolResponse(success=False, error=err.message)
                         break
+                    
+                    self.warning(
+                        "tool_execution_failed",
+                        step=step.step_number,
+                        tool=tool,
+                        severity=severity_str,
+                        error=str(e),
+                        attempt=attempt + 1
+                    )
                     resp = ToolResponse(success=False, error=str(e))
 
             await self.middleware.dispatch(
@@ -168,14 +211,28 @@ class ExecutorAgent(LoggerMixin):
         # ---- DYNAMIC EXECUTION ----
         else:
             last_exc = None
-            for _ in range((step.retry or 0) + 1):
+            for attempt in range((step.retry or 0) + 1):
                 try:
                     raw = await agent.invoke(query=step.description, params=params)
                     out = raw.get("result") if isinstance(raw, dict) else raw
                     resp = ToolResponse(success=True, output=out)
+                    self.info(
+                        "dynamic_execution_success",
+                        step=step.step_number,
+                        agent_type=step.agent_type,
+                        attempt=attempt + 1
+                    )
                     break
                 except Exception as e:
                     last_exc = e
+                    self.error(
+                        "dynamic_execution_failed",
+                        step=step.step_number,
+                        agent_type=step.agent_type,
+                        severity="RECOVERABLE",
+                        error=str(e),
+                        attempt=attempt + 1
+                    )
                     resp = ToolResponse(success=False, error=str(e))
 
             if step.store_result_as:
@@ -228,7 +285,6 @@ class ExecutorAgent(LoggerMixin):
 
         steps = {s.step_number: s for s in sop.steps}
         ordered = [s.step_number for s in sop.steps]
-        print("SOP Steps Order:", ordered)
 
         if resume_context is not None and resume_step_results is not None:
             self.context = resume_context
@@ -243,7 +299,6 @@ class ExecutorAgent(LoggerMixin):
             if "hitl_approved" in resume_context:
                 step_num = resume_context["hitl_approved"]["step_number"]
                 cur_idx = ordered.index(step_num)
-                print("Resuming from approved HITL at step:", cur_idx)
 
             elif "hitl_skipped" in resume_context:
                 resp = ToolResponse(
@@ -254,7 +309,6 @@ class ExecutorAgent(LoggerMixin):
                 step_num = resume_context["hitl_skipped"]["step_number"]
                 self.step_results[step_num] = resp
                 cur_idx = ordered.index(step_num) + 1
-                print("Resuming from skipped HITL at step:", cur_idx)
 
             else:
                 cur_idx = 0
@@ -270,14 +324,27 @@ class ExecutorAgent(LoggerMixin):
         visits = {k: 0 for k in ordered}
 
         while 0 <= cur_idx < len(ordered):
-            self.info(f"[Executor] Executing step index: {cur_idx}")
             step_number = ordered[cur_idx]
             step = steps[step_number]
+            
+            self.info(
+                "executing_step",
+                step=step_number,
+                step_index=cur_idx,
+                agent_type=step.agent_type,
+                execution_mode=step.execution_mode
+            )
 
             await self.middleware.dispatch("before_step", step, self.context)
 
             visits[step_number] += 1
             if visits[step_number] > self.max_visits_per_step:
+                self.error(
+                    "max_visits_exceeded",
+                    step=step_number,
+                    max_visits=self.max_visits_per_step,
+                    severity="FATAL"
+                )
                 return ExecutionStatus(
                     state=ExecutionState.FAILED,
                     error=f"Step {step_number} exceeded max visits",
@@ -287,8 +354,34 @@ class ExecutorAgent(LoggerMixin):
 
             try:
                 resp = await self.execute_step(step)
+                
+                # Log step completion
+                if resp.success:
+                    tool_name = step.action_type.get("tool") if step.execution_mode == "static" else None
+                    self.info(
+                        "step_completed",
+                        step=step_number,
+                        success=True,
+                        tool=tool_name
+                    )
+                else:
+                    tool_name = step.action_type.get("tool") if step.execution_mode == "static" else None
+                    self.error(
+                        "step_failed",
+                        step=step_number,
+                        tool=tool_name,
+                        error=resp.error,
+                        severity="RECOVERABLE"
+                    )
 
             except HITLRequired as hitl:
+                self.warning(
+                    "hitl_required",
+                    step=step_number,
+                    tool=hitl.tool_name,
+                    reason=hitl.reason,
+                    severity="ESCALATE"
+                )
                 return ExecutionStatus(
                     state=ExecutionState.PENDING_HITL,
                     tool_name=hitl.tool_name,
