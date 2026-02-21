@@ -65,25 +65,40 @@ class PlannerAgent(BaseAgent):
                     "messages": [("user", query)],
                     **system_vars
                 })
-                print("Generated Plan: ", result)
+                self.info(
+                    "planner_attempt_successful",
+                    attempt=attempt,
+                    plan=result.dict()
+                )
                 return result
 
             except Exception as e:
                 agent_error = self.error_handler.handle_exception(
-                    e, source="PlannerAgent.invoke"
+                    e, 
+                    source="PlannerAgent.invoke",
+                    metadata={"attempt": attempt, "query": query[:100]}
                 )
 
-                last_error_message = f"{agent_error.error_type}: {agent_error.message}"
+                last_error_message = f"{agent_error.error_type.value}: {agent_error.message}"
 
                 self.warning(
-                    f"[PlannerAgent] Attempt {attempt} failed: {last_error_message}"
+                    "planner_attempt_failed",
+                    attempt=attempt,
+                    error_type=agent_error.error_type.value,
+                    error_message=agent_error.message,
+                    severity=agent_error.severity.value
                 )
 
-                if agent_error.severity != ErrorSeverity.RECOVERABLE:
+                if not self.error_handler.is_recoverable(agent_error):
+                    self.error(
+                        "planner_fatal_error",
+                        error_type=agent_error.error_type.value,
+                        error_message=agent_error.message
+                    )
                     break
 
         # --------------------------------------------------------
         # 5) FAIL SAU NHIỀU LẦN THỬ
         # --------------------------------------------------------
-        self.error(f"[PlannerAgent] Failed after {self.MAX_RETRY} attempts.")
+        self.error("planner_failed_after_retries", max_retry=self.MAX_RETRY, final_error=last_error_message)
         return {'success': False, 'message': last_error_message}

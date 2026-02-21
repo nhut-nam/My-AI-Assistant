@@ -104,22 +104,51 @@ class PlanCriticAgent(BaseAgent):
     # INVOKE (retry + structured validate)
     # ------------------------------------------------------------
     async def invoke(self, plan, query=None):
+        try:
+            if not plan:
+                validation_error = self.error_handler.handle_validation_failure(
+                    "Plan is None or invalid",
+                    source="PlanCriticAgent.invoke"
+                )
+                self.error("critic_no_plan", error=validation_error.message)
+                return {"success": False, "error": validation_error.message}
 
-        for attempt in range(1, self.MAX_RETRY + 1):
-            self.info(f"[PlanCritic] Attempt {attempt}")
+            for attempt in range(1, self.MAX_RETRY + 1):
+                self.info("critic_attempt", attempt=attempt, max_retry=self.MAX_RETRY)
 
-            try:
-                chain = self.chain(plan, query)
-                feedback = await chain.ainvoke({"messages": []})
+                try:
+                    chain = self.chain(plan, query)
+                    feedback = await chain.ainvoke({"messages": []})
 
-                self.info("[PlanCritic] Structured output received")
-                return {"success": True, "feedback": feedback}
+                    self.info("critic_feedback_received", score=feedback.score if hasattr(feedback, 'score') else None)
+                    return {"success": True, "feedback": feedback}
 
-            except Exception as e:
-                self.warning(f"[PlanCritic] Error: {e}")
-                continue
+                except Exception as e:
+                    agent_error = self.error_handler.handle_exception(
+                        e,
+                        source="PlanCriticAgent.invoke",
+                        metadata={"attempt": attempt, "plan_steps_count": len(plan.steps) if plan else 0}
+                    )
+                    self.warning("critic_attempt_failed", attempt=attempt, error=agent_error.message, error_type=agent_error.error_type.value)
+                    
+                    if not self.error_handler.is_recoverable(agent_error):
+                        return {"success": False, "error": agent_error.message}
+                    continue
 
-        return {
-            "success": False,
-            "error": "Could not produce valid CriticFeedback after retries."
-        }
+            # All retries exhausted
+            final_error = self.error_handler.handle_validation_failure(
+                "Could not produce valid CriticFeedback after retries.",
+                source="PlanCriticAgent.invoke",
+                metadata={"max_retry": self.MAX_RETRY}
+            )
+            self.error("critic_failed_after_retries", max_retry=self.MAX_RETRY, error=final_error.message)
+            return {"success": False, "error": final_error.message}
+            
+        except Exception as e:
+            agent_error = self.error_handler.handle_exception(
+                e,
+                source="PlanCriticAgent.invoke",
+                metadata={"has_plan": plan is not None}
+            )
+            self.error("critic_exception", error=agent_error.message, error_type=agent_error.error_type.value)
+            return {"success": False, "error": agent_error.message}

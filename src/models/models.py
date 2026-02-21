@@ -226,6 +226,21 @@ class HITLRequired(Exception):
         self.params = params
         self.reason = reason
         
+    @staticmethod
+    def check_interrupt(output, *, segment_id=None):
+        intr = output.get("__interrupt__")
+        if not intr:
+            return None
+
+        req = intr.value["action_requests"][0]
+
+        return HITLRequired(
+            tool_name=req["name"],
+            params=req["args"],
+            reason=req.get("description"),
+            segment_id=segment_id,
+        )
+        
 @dataclass
 class ExecutionStatus:
     state: ExecutionState
@@ -252,6 +267,8 @@ class StateSchema(BaseModel):
     is_resume: bool = False
     hitl_decision: Optional[Literal["approve", "reject"]] = None
     segment_id: Optional[str] = None  # Conversation segment ID for tracking
+    
+    post_execution_review: Optional[Dict[str, Any]] = None
 
 
 @dataclass

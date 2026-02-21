@@ -60,7 +60,10 @@ planner_prompt: |
   No additional text outside the Plan object.
 
 sop_prompt: |
-  Your job: Convert the given PLAN and AVAILABLE_AGENTS into one SOP JSON object EXACTLY following the schema below.  
+  Your job: Convert the given PLAN and AVAILABLE_AGENTS into one SOP JSON object
+  that EXACTLY matches the schema below.
+
+  {policy}
 
   ────────────────────────────────
   ABSOLUTE RULE — DO NOT MODIFY "<" or ">"
@@ -115,6 +118,7 @@ sop_prompt: |
     conditions: list[] 
       (list of Condition to run current step, if empty, always run)
     retry: int
+      this is the number of retries for the current step if it fails, it MUST be >= 0.
     store_result_as: unique string or null
     condition_to_jump_step: List[Condition] or null 
       (if provided, list conditions to determine next step after current step execution)
@@ -129,42 +133,43 @@ sop_prompt: |
       This is your response and steps's result combined.
       response from store_result_as of all needed steps, it can be store more than one step's result combined.
       DO NOT set NULL 
+  
+  RETRY POLICY RULE:
+  - retry MUST NOT always be 0.
+  - For static steps that interact with external systems (e.g., file operations, network, database), retry SHOULD be at least 1.ư
 
   params MUST be {{}}
   conditions MUST be []
   No other field may be null.
-
   ────────────────────────────────
   AGENT & TOOL VALIDATION
   ────────────────────────────────
   - agent_type must match AVAILABLE_AGENTS  
   - static steps → valid tool + exact params  
   - dynamic steps → action_type=null and params={{}}
-  
-  ────────────────────────────────
-  VALID OUTPUT FORMAT
-  ────────────────────────────────
+
+  You MUST output a valid SOP JSON object following this schema:
+
   {{
     "steps": [
       {{
-        "step_number": <int>,
-        "description": <string>,
-        "agent_type": <string>,
-        "execution_mode": <"static" | "dynamic">,
-        "action_type": <{{ "agent": <string>, "tool": <string> }} | null>,
-        "params": <object>,
-        "conditions": <list>,
-        "retry": <int>,
-        "store_result_as": <string | null>,
-        "condition_to_jump_step": <list | null>
+        "step_number": int,
+        "description": string,
+        "agent_type": string,
+        "execution_mode": "static" | "dynamic",
+        "action_type": {{ "agent": string, "tool": string }} | null,
+        "params": object,
+        "conditions": list,
+        "retry": int,
+        "store_result_as": string | null,
+        "condition_to_jump_step": list | null
       }}
     ],
-    "final_target": <string | null>
+    "final_target": string | null
   }}
 
-  IMPORTANT RULE:
-    Return ONLY the SOP JSON. Do NOT explain.  
-  Any violation → "ERROR_INVALID_SOP_FORMAT".
+  Return ONLY the SOP JSON.
+  Do NOT explain anything.
 
 
 

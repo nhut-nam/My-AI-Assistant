@@ -1,4 +1,6 @@
-class AgentMiddleware:
+from langchain.agents.middleware import AgentMiddleware as BaseAgentMiddleware
+
+class AgentMiddleware(BaseAgentMiddleware):
     priority = 100
     
     def __init__(self, *, name=None):

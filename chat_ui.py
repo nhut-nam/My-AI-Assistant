@@ -1,14 +1,16 @@
 import sys
 import uuid
 import asyncio
+import traceback as trackback
+
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QLineEdit, QPushButton
 )
 from PySide6.QtCore import Qt
+
 from src.prompt_engineering.chaining import GradChaining
 from src.models.models import ConversationStatus
-import traceback as trackback
 
 
 class ChatWindow(QWidget):
@@ -22,6 +24,8 @@ class ChatWindow(QWidget):
         self.active_segment_id = None
 
         self._build_ui()
+
+        # Async loop (GIỮ NGUYÊN)
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
@@ -51,28 +55,81 @@ class ChatWindow(QWidget):
     def render_segment(self, segment):
         self.chat_area.clear()
 
+        # ---- Chat messages ----
         for msg in segment.messages:
             role = "You" if msg.role == "user" else "Agent"
             self.chat_area.append(f"<b>{role}:</b> {msg.content}")
 
+        # ---- Status ----
         self.chat_area.append(
             f"<hr><i>Status: {segment.status}</i>"
         )
+
+        # -------------------------------------------------
+        # POST EXECUTION REVIEW (OPTIONAL, READ-ONLY)
+        # -------------------------------------------------
+        review = getattr(segment, "post_execution_review", None)
+        if review:
+            self.render_post_execution_review(review)
 
         self.chat_area.verticalScrollBar().setValue(
             self.chat_area.verticalScrollBar().maximum()
         )
 
     # -------------------------------------------------
+    def render_post_execution_review(self, review: dict):
+        """
+        Render teacher-style execution review.
+        This is READ-ONLY UI logic.
+        """
+        self.chat_area.append("<hr>")
+        self.chat_area.append("<b>📋 Execution Review</b>")
+
+        score = review.get("score", {})
+        critic = review.get("critic", {})
+
+        # ---- Score summary ----
+        if score:
+            self.chat_area.append(
+                f"<b>Score:</b> "
+                f"{score.get('total_score')}/{score.get('max_score')} "
+                f"({score.get('grade')})"
+            )
+
+            for step in score.get("per_step", []):
+                issues = step.get("issues") or []
+                issue_text = ", ".join(issues) if issues else "None"
+
+                self.chat_area.append(
+                    f"- Step {step['step_number']}: "
+                    f"{step['score']}/{step['max_score']} "
+                    f"(Issues: {issue_text})"
+                )
+
+        # ---- Teacher / LLM comment ----
+        if critic:
+            self.chat_area.append("<br><b>Teacher Comment:</b>")
+            self.chat_area.append(
+                critic.get("response", "No comment.")
+            )
+
+            self.chat_area.append(
+                f"<i>Policy learning:</i> "
+                f"is_edit={critic.get('is_edit')} | "
+                f"confidence={critic.get('confidence')}"
+            )
+
+    # -------------------------------------------------
     def send_message(self):
         text = self.input_box.text().strip()
         if not text:
             return
+
         self.input_box.clear()
 
         try:
             # -----------------------------------------
-            # CHƯA CÓ SEGMENT → TẠO MỚI
+            # NO ACTIVE SEGMENT → CREATE NEW
             # -----------------------------------------
             if self.active_segment_id is None:
                 self.active_segment_id = f"seg-{uuid.uuid4().hex[:8]}"
@@ -85,11 +142,12 @@ class ChatWindow(QWidget):
                 )
 
             # -----------------------------------------
-            # SEGMENT ĐANG WAITING HITL
+            # EXISTING SEGMENT
             # -----------------------------------------
             else:
                 segment = self.grad.segments[self.active_segment_id]
 
+                # ---- WAITING HITL ----
                 if segment.status == ConversationStatus.WAITING_HITL:
                     if text.lower() not in ("approve", "reject"):
                         self.chat_area.append(
@@ -104,8 +162,8 @@ class ChatWindow(QWidget):
                         )
                     )
 
+                # ---- DONE / FAILED → NEW SEGMENT ----
                 else:
-                    # segment đã DONE / FAILED → tạo segment mới
                     self.active_segment_id = f"seg-{uuid.uuid4().hex[:8]}"
                     segment = self.loop.run_until_complete(
                         self.grad.invoke(
@@ -118,7 +176,9 @@ class ChatWindow(QWidget):
 
         except Exception as e:
             trackback.print_exc()
-            self.chat_area.append(f"<b>Agent:</b> Error: {e}")
+            self.chat_area.append(
+                f"<b>Agent:</b> Error: {e}"
+            )
 
 
 # -------------------------------------------------
