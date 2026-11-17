@@ -8,6 +8,8 @@ from src.agent.sop_agent import SOPAgent
 from src.multiagent.executor_agent import ExecutorAgent
 from src.agent.crud_agent import CRUDAgent
 from src.agent.simple_math_agent import SimpleMathAgent
+from src.agent.ops_agent import OpsAgent
+from src.tools.group.business_ops import WRITE_TOOLS
 from src.tools.base_tool import BaseTool
 from src.llm.groq_client import GroqClient
 from src.llm.ollama_client import OllamaClient
@@ -52,12 +54,18 @@ class LifeCycle(LoggerMixin):
         self.math = SimpleMathAgent(llm=self.llm_ollama)
         self.math.register_tool(self.base_tool.get_tools_by_group("math"))
 
-        self.dispatcher = SOPStepDispatcher(sop_agent=self.sop_agent, agents=[self.crud, self.math, self.chit_chat])
+        # Business operations agent (orders / inventory / purchasing / refunds)
+        self.ops = OpsAgent(llm=self.llm)
+        self.ops.register_tool(self.base_tool.get_tools_by_group("business"))
+
+        self.dispatcher = SOPStepDispatcher(sop_agent=self.sop_agent, agents=[self.crud, self.math, self.chit_chat, self.ops])
         
+        # Every tool that changes data needs a human "approve" before it runs.
         hitl = HITL(
             tools=[
                 "delete_file",
-                "rename_file"
+                "rename_file",
+                *WRITE_TOOLS,
             ]
         )
         
@@ -69,6 +77,7 @@ class LifeCycle(LoggerMixin):
         self.executor.register_agent(self.crud)
         self.executor.register_agent(self.math)
         self.executor.register_agent(self.chit_chat)
+        self.executor.register_agent(self.ops)
         
         self.error_handler = ErrorHandler()
         
@@ -84,6 +93,11 @@ class LifeCycle(LoggerMixin):
         
         def route_from_start(state: StateSchema):
             self.debug("router_start", is_resume=state.is_resume)
+            # Resuming after a human decision: apply the decision first, then continue
+            # from the paused step (completed steps are NOT re-run).
+            if state.is_resume and state.hitl_decision is not None:
+                self.info("router_resume_with_decision", route="resume", decision=state.hitl_decision)
+                return "resume"
             if state.is_resume:
                 self.info("router_resume_detected", route="executor")
                 return "executor"
@@ -348,6 +362,8 @@ class LifeCycle(LoggerMixin):
                     step_number=exec_result.current_step_idx + 1
                 )
 
+                # Clear any older approval so the executor cannot resume at (and re-run) that step.
+                exec_result.context.pop("hitl_approved", None)
                 exec_result.context["hitl_skipped"] = {
                     "tool": exec_result.tool_name,
                     "step_number": exec_result.current_step_idx + 1,
@@ -367,6 +383,7 @@ class LifeCycle(LoggerMixin):
                     step_number=exec_result.current_step_idx + 1
                 )
 
+                exec_result.context.pop("hitl_skipped", None)
                 exec_result.context["hitl_approved"] = {
                     "tool": exec_result.tool_name,
                     "step_number": exec_result.current_step_idx + 1,
@@ -394,6 +411,7 @@ class LifeCycle(LoggerMixin):
             {
                 "planner": "planner",
                 "executor": "executor",
+                "resume": "resume",
             }
         )
         graph.add_edge("planner", "critic")
@@ -441,6 +459,8 @@ class LifeCycle(LoggerMixin):
                 self.crud.execution_id = segment_id
             if hasattr(self.math, 'execution_id'):
                 self.math.execution_id = segment_id
+            if hasattr(self.ops, 'execution_id'):
+                self.ops.execution_id = segment_id
             self.execution_id = segment_id
         
         raw_state = await self.workflow.ainvoke(state)
