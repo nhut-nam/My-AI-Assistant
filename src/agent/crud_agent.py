@@ -2,6 +2,7 @@ from src.agent.base_agent import BaseAgent
 from langchain_core.messages import HumanMessage, SystemMessage
 from src.tools.base_tool import BaseTool
 import json
+from src.models.models import HITLRequired
 
 BaseTool.auto_discover()
 
@@ -40,12 +41,16 @@ class CRUDAgent(BaseAgent):
     async def invoke(self, **kwargs):
         query = kwargs.get("query", "")
         params = kwargs.get("params", {})
+        segment_id = kwargs.get("segment_id", None)
 
         self.info(f"[CRUDAgent] Invoking with query: {query}")
 
         prompt = self.build_prompt(query=query, params=params)
+        
 
         output = await self.llm.ainvoke(prompt)
+        if result := HITLRequired.check_interrupt(output, segment_id=segment_id):
+            return result
         raw = output.content.strip()
 
         self.info(f"[CRUDAgent] Raw output: {raw}")

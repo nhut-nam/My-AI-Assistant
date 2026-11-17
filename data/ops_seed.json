@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "as_of": "2026-11-15",
+    "currency": "VND",
+    "fulfillment_sla_days": 3,
+    "max_po_quantity": 1000,
+    "description": "Fictional demo data for a small apparel shop. Used by the ops agent and its evaluation."
+  },
+  "suppliers": [
+    {"supplier_id": "SUP-01", "name": "Saigon Garment Co.", "lead_time_days": 7, "email": "orders@saigongarment.example"},
+    {"supplier_id": "SUP-02", "name": "Delta Accessories", "lead_time_days": 5, "email": "sales@deltaacc.example"}
+  ],
+  "products": [
+    {"sku": "SKU-TEE-BLK", "name": "Basic Tee - Black", "on_hand": 12, "reserved": 8, "reorder_point": 20, "reorder_qty": 100, "unit_cost": 60000, "price": 149000, "supplier_id": "SUP-01"},
+    {"sku": "SKU-TEE-WHT", "name": "Basic Tee - White", "on_hand": 140, "reserved": 10, "reorder_point": 30, "reorder_qty": 100, "unit_cost": 60000, "price": 149000, "supplier_id": "SUP-01"},
+    {"sku": "SKU-HOOD-GRY", "name": "Hoodie - Grey", "on_hand": 5, "reserved": 5, "reorder_point": 15, "reorder_qty": 50, "unit_cost": 180000, "price": 399000, "supplier_id": "SUP-01"},
+    {"sku": "SKU-JEAN-32", "name": "Slim Jeans - W32", "on_hand": 25, "reserved": 3, "reorder_point": 20, "reorder_qty": 40, "unit_cost": 220000, "price": 499000, "supplier_id": "SUP-01"},
+    {"sku": "SKU-CAP-NVY", "name": "Cap - Navy", "on_hand": 60, "reserved": 0, "reorder_point": 20, "reorder_qty": 60, "unit_cost": 45000, "price": 129000, "supplier_id": "SUP-02"},
+    {"sku": "SKU-SOCK-3P", "name": "Socks 3-pack", "on_hand": 18, "reserved": 0, "reorder_point": 25, "reorder_qty": 200, "unit_cost": 25000, "price": 79000, "supplier_id": "SUP-02"},
+    {"sku": "SKU-BAG-TOTE", "name": "Canvas Tote Bag", "on_hand": 40, "reserved": 2, "reorder_point": 10, "reorder_qty": 50, "unit_cost": 35000, "price": 99000, "supplier_id": "SUP-02"}
+  ],
+  "customers": [
+    {"customer_id": "CUS-001", "name": "Tran Minh Anh", "email": "minhanh@example.com", "tier": "vip"},
+    {"customer_id": "CUS-002", "name": "Le Quoc Bao", "email": "quocbao@example.com", "tier": "regular"},
+    {"customer_id": "CUS-003", "name": "Pham Thu Ha", "email": "thuha@example.com", "tier": "regular"},
+    {"customer_id": "CUS-004", "name": "Nguyen Duc Huy", "email": "duchuy@example.com", "tier": "vip"},
+    {"customer_id": "CUS-005", "name": "Vo Ngoc Lan", "email": "ngoclan@example.com", "tier": "regular"},
+    {"customer_id": "CUS-006", "name": "Do Thanh Tung", "email": "thanhtung@example.com", "tier": "regular"}
+  ],
+  "orders": [
+    {"order_id": "ORD-1001", "customer_id": "CUS-001", "status": "delivered", "created_at": "2026-11-02", "paid_amount": 447000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-TEE-WHT", "qty": 3, "unit_price": 149000}],
+     "shipment": {"carrier": "GHN", "tracking": "GHN100001", "shipped_at": "2026-11-03", "expected_delivery": "2026-11-06", "delivered_at": "2026-11-05"}},
+    {"order_id": "ORD-1002", "customer_id": "CUS-002", "status": "shipped", "created_at": "2026-11-07", "paid_amount": 399000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-HOOD-GRY", "qty": 1, "unit_price": 399000}],
+     "shipment": {"carrier": "GHTK", "tracking": "GHTK200002", "shipped_at": "2026-11-08", "expected_delivery": "2026-11-12", "delivered_at": null}},
+    {"order_id": "ORD-1003", "customer_id": "CUS-003", "status": "paid", "created_at": "2026-11-09", "paid_amount": 499000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-JEAN-32", "qty": 1, "unit_price": 499000}],
+     "shipment": null},
+    {"order_id": "ORD-1004", "customer_id": "CUS-001", "status": "pending_payment", "created_at": "2026-11-14", "paid_amount": 0, "refunded_amount": 0,
+     "items": [{"sku": "SKU-CAP-NVY", "qty": 2, "unit_price": 129000}],
+     "shipment": null},
+    {"order_id": "ORD-1005", "customer_id": "CUS-004", "status": "shipped", "created_at": "2026-11-12", "paid_amount": 298000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-TEE-BLK", "qty": 2, "unit_price": 149000}],
+     "shipment": {"carrier": "GHN", "tracking": "GHN100005", "shipped_at": "2026-11-13", "expected_delivery": "2026-11-17", "delivered_at": null}},
+    {"order_id": "ORD-1006", "customer_id": "CUS-005", "status": "delivered", "created_at": "2026-11-01", "paid_amount": 237000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-SOCK-3P", "qty": 3, "unit_price": 79000}],
+     "shipment": {"carrier": "VNPost", "tracking": "VNP300006", "shipped_at": "2026-11-02", "expected_delivery": "2026-11-06", "delivered_at": "2026-11-06"}},
+    {"order_id": "ORD-1007", "customer_id": "CUS-002", "status": "packed", "created_at": "2026-11-14", "paid_amount": 228000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-CAP-NVY", "qty": 1, "unit_price": 129000}, {"sku": "SKU-BAG-TOTE", "qty": 1, "unit_price": 99000}],
+     "shipment": null},
+    {"order_id": "ORD-1008", "customer_id": "CUS-006", "status": "cancelled", "created_at": "2026-11-10", "paid_amount": 0, "refunded_amount": 0,
+     "items": [{"sku": "SKU-TEE-BLK", "qty": 1, "unit_price": 149000}],
+     "shipment": null},
+    {"order_id": "ORD-1009", "customer_id": "CUS-003", "status": "shipped", "created_at": "2026-11-05", "paid_amount": 298000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-TEE-BLK", "qty": 2, "unit_price": 149000}],
+     "shipment": {"carrier": "GHTK", "tracking": "GHTK200009", "shipped_at": "2026-11-06", "expected_delivery": "2026-11-10", "delivered_at": null}},
+    {"order_id": "ORD-1010", "customer_id": "CUS-004", "status": "paid", "created_at": "2026-11-15", "paid_amount": 798000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-HOOD-GRY", "qty": 2, "unit_price": 399000}],
+     "shipment": null},
+    {"order_id": "ORD-1011", "customer_id": "CUS-005", "status": "delivered", "created_at": "2026-11-03", "paid_amount": 499000, "refunded_amount": 0,
+     "items": [{"sku": "SKU-JEAN-32", "qty": 1, "unit_price": 499000}],
+     "shipment": {"carrier": "GHN", "tracking": "GHN100011", "shipped_at": "2026-11-04", "expected_delivery": "2026-11-07", "delivered_at": "2026-11-07"}},
+    {"order_id": "ORD-1012", "customer_id": "CUS-001", "status": "refunded", "created_at": "2026-10-28", "paid_amount": 129000, "refunded_amount": 129000,
+     "items": [{"sku": "SKU-CAP-NVY", "qty": 1, "unit_price": 129000}],
+     "shipment": {"carrier": "GHN", "tracking": "GHN100012", "shipped_at": "2026-10-29", "expected_delivery": "2026-11-01", "delivered_at": "2026-11-01"}}
+  ]
+}

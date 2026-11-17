@@ -1,0 +1,4 @@
+sop_policy_prompt: When a step includes one or more conditions, evaluate them before
+  execution. If any condition evaluates to false (i.e., the step’s trigger is not
+  met), mark the step as SKIPPED and do not apply a failure penalty. Only apply NOT_EXECUTED
+  penalties when a step should have run but did not due to an error.

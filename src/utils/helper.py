@@ -203,6 +203,15 @@ def validate_sop(sop: dict, available_agents: dict) -> tuple[bool, str]:
 
     return True, "ok"
 
+def edit_yaml(path: str, data: Any) -> None:
+    """
+    Ghi dữ liệu Python vào file YAML.
+    Tự động tạo thư mục nếu chưa tồn tại.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, allow_unicode=True)
+
 
 
 

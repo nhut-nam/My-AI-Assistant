@@ -159,7 +159,12 @@ class ExecutorAgent(LoggerMixin):
             for attempt in range((step.retry or 0) + 1):
                 try:
                     out = tool_fn(**params)
-                    resp = ToolResponse(success=True, output=out)
+                    resp = ToolResponse(success=True, output=out, meta={
+                        "step_number": step.step_number,
+                        "tool_name": tool,
+                        "params": params,
+                        "retry_count": attempt + 1,
+                    })
                     self.info(
                         "tool_execution_success",
                         step=step.step_number,
@@ -181,7 +186,12 @@ class ExecutorAgent(LoggerMixin):
                             error=err.message,
                             attempt=attempt + 1
                         )
-                        resp = ToolResponse(success=False, error=err.message)
+                        resp = ToolResponse(success=False, error=err.message, meta={
+                            "step_number": step.step_number,
+                            "tool_name": tool,
+                            "params": params,
+                            "retry_count": attempt + 1,
+                        })
                         break
                     
                     self.warning(
@@ -192,7 +202,12 @@ class ExecutorAgent(LoggerMixin):
                         error=str(e),
                         attempt=attempt + 1
                     )
-                    resp = ToolResponse(success=False, error=str(e))
+                    resp = ToolResponse(success=False, error=str(e), meta={
+                        "step_number": step.step_number,
+                        "tool_name": tool,
+                        "params": params,
+                        "retry_count": attempt + 1,
+                    })
 
             await self.middleware.dispatch(
                 "after_tool",
@@ -214,8 +229,15 @@ class ExecutorAgent(LoggerMixin):
             for attempt in range((step.retry or 0) + 1):
                 try:
                     raw = await agent.invoke(query=step.description, params=params)
+                    if isinstance(raw, HITLRequired):
+                        raise raw
                     out = raw.get("result") if isinstance(raw, dict) else raw
-                    resp = ToolResponse(success=True, output=out)
+                    resp = ToolResponse(success=True, output=out, meta={
+                        "step_number": step.step_number,
+                        "tool_name": step.agent_type,
+                        "params": params,
+                        "retry_count": attempt + 1,
+                    })
                     self.info(
                         "dynamic_execution_success",
                         step=step.step_number,
@@ -233,7 +255,12 @@ class ExecutorAgent(LoggerMixin):
                         error=str(e),
                         attempt=attempt + 1
                     )
-                    resp = ToolResponse(success=False, error=str(e))
+                    resp = ToolResponse(success=False, error=str(e), meta={
+                        "step_number": step.step_number,
+                        "tool_name": step.agent_type,
+                        "params": params,
+                        "retry_count": attempt + 1,
+                    })
 
             if step.store_result_as:
                 self.context[step.store_result_as] = resp.output

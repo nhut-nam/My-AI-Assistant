@@ -8,8 +8,9 @@ from src.llm.base import BaseClient
 from src.models.models import Response
 from langchain.agents import create_agent
 from src.handler.error_handler import ErrorHandler
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain.agents.middleware import HumanInTheLoopMiddleware
 import json
-from src.middleware.agent_middleware import AgentMiddleware
 
 class BaseAgent(LoggerMixin, ABC):
     """
@@ -33,7 +34,7 @@ class BaseAgent(LoggerMixin, ABC):
         self._tools: List[Callable] = []
         self.agent = self._create_agent()
         self.description = description
-        self.middleware = List[AgentMiddleware]
+        self.middleware: List = []
         self.error_handler = ErrorHandler()
 
         if tools:
@@ -122,6 +123,7 @@ class BaseAgent(LoggerMixin, ABC):
         return create_agent(
             model=self.llm,
             tools=self._tools,
+            checkpointer=InMemorySaver()
         )
     
     @abstractmethod
@@ -141,5 +143,14 @@ class BaseAgent(LoggerMixin, ABC):
     def to_string(self):
         return str(self)
     
-    def set_middleware(self, middleware: AgentMiddleware):
-        self.middleware.append(middleware)
+    # def set_hitl_middleware(self, interupt_on: dict):
+    #     if not isinstance(interupt_on, dict):
+    #         raise TypeError("interupt_on must be a dictionary")
+        
+    #     hitl_tools = interupt_on.get("tools", [])
+        
+    #     if hitl_tools not in self.list_tools():
+    #         self.logger.warning(f"One or more HITL tools {hitl_tools} are not registered in the agent's tools.")
+            
+    #     hitl_middleware = HumanInTheLoopMiddleware(interrupt_on=
+    #     self.middleware.append(interupt_on)
